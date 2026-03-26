@@ -6,6 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		73634AC62F74478900727450 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 73634AC52F74478900727450 /* Auth */; };
+		73634AC82F74478900727450 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 73634AC72F74478900727450 /* Functions */; };
+		73634ACA2F74478900727450 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 73634AC92F74478900727450 /* PostgREST */; };
+		73634ACC2F74478900727450 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 73634ACB2F74478900727450 /* Realtime */; };
+		73634ACE2F74478900727450 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 73634ACD2F74478900727450 /* Storage */; };
+		73634AD02F74478900727450 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 73634ACF2F74478900727450 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		73634AB62F7442F200727450 /* La Menu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "La Menu.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +32,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				73634ACA2F74478900727450 /* PostgREST in Frameworks */,
+				73634AC82F74478900727450 /* Functions in Frameworks */,
+				73634AD02F74478900727450 /* Supabase in Frameworks */,
+				73634AC62F74478900727450 /* Auth in Frameworks */,
+				73634ACE2F74478900727450 /* Storage in Frameworks */,
+				73634ACC2F74478900727450 /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +80,12 @@
 			);
 			name = "La Menu";
 			packageProductDependencies = (
+				73634AC52F74478900727450 /* Auth */,
+				73634AC72F74478900727450 /* Functions */,
+				73634AC92F74478900727450 /* PostgREST */,
+				73634ACB2F74478900727450 /* Realtime */,
+				73634ACD2F74478900727450 /* Storage */,
+				73634ACF2F74478900727450 /* Supabase */,
 			);
 			productName = "La Menu";
 			productReference = 73634AB62F7442F200727450 /* La Menu.app */;
@@ -94,6 +115,9 @@
 			);
 			mainGroup = 73634AAD2F7442F200727450;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				73634AC42F74478900727450 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 73634AB72F7442F200727450 /* Products */;
 			projectDirPath = "";
@@ -251,6 +275,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = F3Z4FTBA6M;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -282,6 +307,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = F3Z4FTBA6M;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -328,6 +354,50 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		73634AC42F74478900727450 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		73634AC52F74478900727450 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73634AC42F74478900727450 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		73634AC72F74478900727450 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73634AC42F74478900727450 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		73634AC92F74478900727450 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73634AC42F74478900727450 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		73634ACB2F74478900727450 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73634AC42F74478900727450 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		73634ACD2F74478900727450 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73634AC42F74478900727450 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		73634ACF2F74478900727450 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73634AC42F74478900727450 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 73634AAE2F7442F200727450 /* Project object */;
 }

@@ -23,6 +23,7 @@ struct MainTabView: View {
                     Label("Profil", systemImage: "person.fill")
                 }
         }
+        .font(.custom("WixMadeforDisplay-Regular", size: 14))
         .tint(.black)
     }
 }

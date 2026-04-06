@@ -21,28 +21,7 @@ final class MenusViewModel {
         do {
             let menu = try await fetchOrCreateMenu(profileID: profileID)
             self.menu = menu
-
-            async let categoriesTask: [MenuCategory] = SupabaseManager.shared
-                .from("menu_categories")
-                .select()
-                .eq("menu_id", value: menu.id.uuidString)
-                .order("sort_order", ascending: true)
-                .execute()
-                .value
-
-            async let itemsTask: [MenuItem] = SupabaseManager.shared
-                .from("menu_items")
-                .select()
-                .order("sort_order", ascending: true)
-                .execute()
-                .value
-
-            self.categories = try await categoriesTask
-            let allItems = try await itemsTask
-
-            let categoryIDs = Set(self.categories.map(\.id))
-            self.items = allItems.filter { categoryIDs.contains($0.categoryID) }
-
+            try await reloadCurrentMenu()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -92,9 +71,13 @@ final class MenusViewModel {
             .value
 
         guard let createdMenu = created.first else {
-            throw NSError(domain: "MenusViewModel", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "Nie udało się utworzyć menu"
-            ])
+            throw NSError(
+                domain: "MenusViewModel",
+                code: 1,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Nie udało się utworzyć menu"
+                ]
+            )
         }
 
         return createdMenu
@@ -107,6 +90,8 @@ final class MenusViewModel {
         let cleanDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !cleanName.isEmpty else { return }
+
+        errorMessage = nil
 
         do {
             struct InsertCategory: Encodable {
@@ -147,7 +132,8 @@ final class MenusViewModel {
         tags: String = "",
         isRecommended: Bool = false,
         isSpicy: Bool = false,
-        isVegetarian: Bool = false
+        isVegetarian: Bool = false,
+        imageData: Data? = nil
     ) async {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -157,7 +143,16 @@ final class MenusViewModel {
 
         guard !cleanName.isEmpty else { return }
 
+        errorMessage = nil
+
         do {
+            let uploadedImageURL: String?
+            if let imageData, !imageData.isEmpty {
+                uploadedImageURL = try await uploadItemImage(data: imageData)
+            } else {
+                uploadedImageURL = nil
+            }
+
             struct InsertItem: Encodable {
                 let category_id: UUID
                 let name: String
@@ -184,7 +179,7 @@ final class MenusViewModel {
                 price: price,
                 old_price: oldPrice,
                 weight: cleanWeight.isEmpty ? nil : cleanWeight,
-                image_url: nil,
+                image_url: uploadedImageURL,
                 allergens: cleanAllergens.isEmpty ? nil : cleanAllergens,
                 tags: cleanTags.isEmpty ? nil : cleanTags,
                 is_recommended: isRecommended,
@@ -206,6 +201,8 @@ final class MenusViewModel {
     }
 
     func deleteCategory(_ category: MenuCategory) async {
+        errorMessage = nil
+
         do {
             try await SupabaseManager.shared
                 .from("menu_categories")
@@ -220,6 +217,8 @@ final class MenusViewModel {
     }
 
     func deleteItem(_ item: MenuItem) async {
+        errorMessage = nil
+
         do {
             try await SupabaseManager.shared
                 .from("menu_items")
@@ -257,9 +256,33 @@ final class MenusViewModel {
             .execute()
             .value
 
-        self.categories = try await categoriesTask
+        let loadedCategories = try await categoriesTask
         let allItems = try await itemsTask
-        let categoryIDs = Set(self.categories.map(\.id))
+        let categoryIDs = Set(loadedCategories.map(\.id))
+
+        self.categories = loadedCategories
         self.items = allItems.filter { categoryIDs.contains($0.categoryID) }
+    }
+
+    private func uploadItemImage(data: Data) async throws -> String {
+        let fileName = "\(UUID().uuidString).jpg"
+
+        try await SupabaseManager.shared.storage
+            .from("menu-items")
+            .upload(
+                path: fileName,
+                file: data,
+                options: FileOptions(
+                    cacheControl: "3600",
+                    contentType: "image/jpeg",
+                    upsert: false
+                )
+            )
+
+        let publicURL = try SupabaseManager.shared.storage
+            .from("menu-items")
+            .getPublicURL(path: fileName)
+
+        return publicURL.absoluteString
     }
 }

@@ -3,32 +3,47 @@ import Foundation
 enum OnboardingStep: Int, CaseIterable {
     case basicInfo = 0
     case publicLink = 1
-    case openingHours = 2
-    case firstMenu = 3
-    case finish = 4
+    case legalDetails = 2
+    case fulfillment = 3
+    case openingHours = 4
+    case firstMenu = 5
+    case finish = 6
 
     var title: String {
         switch self {
-        case .basicInfo: return "Basic info"
-        case .publicLink: return "Public link"
-        case .openingHours: return "Opening hours"
-        case .firstMenu: return "First menu"
-        case .finish: return "Finish"
+        case .basicInfo:
+            return "Podstawowe informacje"
+        case .publicLink:
+            return "Link publiczny"
+        case .legalDetails:
+            return "Dane prawne"
+        case .fulfillment:
+            return "Realizacja i płatność"
+        case .openingHours:
+            return "Godziny otwarcia"
+        case .firstMenu:
+            return "Pierwsza kategoria i pozycja"
+        case .finish:
+            return "Wszystko gotowe"
         }
     }
 
     var subtitle: String {
         switch self {
         case .basicInfo:
-            return "Tell us about your place"
+            return "Dodaj dane widoczne na stronie lokalu"
         case .publicLink:
-            return "Choose your public menu link"
+            return "Ustaw adres, który udostępnisz klientom"
+        case .legalDetails:
+            return "Te dane będą wyświetlane w regulaminie i polityce prywatności"
+        case .fulfillment:
+            return "Określ odbiór, dostawę i metody płatności"
         case .openingHours:
-            return "Set your working schedule"
+            return "Ustaw godziny przyjmowania zamówień"
         case .firstMenu:
-            return "Create your first menu"
+            return "Dodaj pierwszą kategorię i pierwszą pozycję"
         case .finish:
-            return "Review everything before launch"
+            return "Sprawdź wszystko przed utworzeniem panelu"
         }
     }
 }
@@ -47,14 +62,35 @@ struct OnboardingDraft {
     var description = ""
     var address = ""
     var phone = ""
+    var logoImageData: Data?
 
     var username = ""
 
-    var menuTitle = "Main Menu"
+    var legalBusinessName = ""
+    var businessDisplayName = ""
+    var nip = ""
+    var addressLine1 = ""
+    var addressLine2 = ""
+    var postalCode = ""
+    var city = ""
+    var country = "Poland"
+    var contactEmail = ""
+    var contactPhone = ""
+    var complaintEmail = ""
+    var complaintPhone = ""
+
+    var pickupAvailable = true
+    var deliveryAvailable = false
+    var deliveryArea = ""
+    var cashPaymentAvailable = true
+    var cardPaymentAvailable = false
+    var blikPaymentAvailable = false
+
     var categoryName = ""
     var firstItemName = ""
     var firstItemDescription = ""
     var firstItemPrice = ""
+    var firstItemImageData: Data?
 
     var days: [DayHoursDraft] = DayHoursDraft.defaultWeek
 }
@@ -62,13 +98,13 @@ struct OnboardingDraft {
 extension DayHoursDraft {
     static var defaultWeek: [DayHoursDraft] {
         [
-            .init(weekday: 1, title: "Monday", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
-            .init(weekday: 2, title: "Tuesday", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
-            .init(weekday: 3, title: "Wednesday", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
-            .init(weekday: 4, title: "Thursday", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
-            .init(weekday: 5, title: "Friday", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
-            .init(weekday: 6, title: "Saturday", isClosed: false, openDate: Self.makeDate(hour: 11, minute: 0), closeDate: Self.makeDate(hour: 23, minute: 0)),
-            .init(weekday: 7, title: "Sunday", isClosed: false, openDate: Self.makeDate(hour: 11, minute: 0), closeDate: Self.makeDate(hour: 21, minute: 0))
+            .init(weekday: 1, title: "Poniedziałek", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
+            .init(weekday: 2, title: "Wtorek", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
+            .init(weekday: 3, title: "Środa", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
+            .init(weekday: 4, title: "Czwartek", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
+            .init(weekday: 5, title: "Piątek", isClosed: false, openDate: Self.makeDate(hour: 10, minute: 0), closeDate: Self.makeDate(hour: 22, minute: 0)),
+            .init(weekday: 6, title: "Sobota", isClosed: false, openDate: Self.makeDate(hour: 11, minute: 0), closeDate: Self.makeDate(hour: 23, minute: 0)),
+            .init(weekday: 7, title: "Niedziela", isClosed: false, openDate: Self.makeDate(hour: 11, minute: 0), closeDate: Self.makeDate(hour: 21, minute: 0))
         ]
     }
 

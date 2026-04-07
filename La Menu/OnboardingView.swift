@@ -5,13 +5,13 @@ import UIKit
 struct OnboardingView: View {
     @Environment(AuthViewModel.self) private var auth
 
-    @State private var selectedPhoto: PhotosPickerItem?
-    @State private var selectedImageData: Data?
-
     @State private var firstItemPhoto: PhotosPickerItem?
     @State private var firstItemImageData: Data?
+    @State private var isSubmittingFinish = false
 
     private let pageBackground = Color.white
+    private let accentColor = Color(lmHex: "#5BE47B")
+    private let accentSoft = Color(lmHex: "#5BE47B").opacity(0.14)
     private let mutedText = Color.black.opacity(0.58)
     private let secondaryText = Color.black.opacity(0.42)
 
@@ -23,6 +23,15 @@ struct OnboardingView: View {
     private var draft: OnboardingDraft {
         get { auth.onboardingDraft }
         nonmutating set { auth.onboardingDraft = newValue }
+    }
+
+    private var usernameBinding: Binding<String> {
+        Binding(
+            get: { auth.onboardingDraft.username },
+            set: { newValue in
+                auth.updateUsernameDraft(newValue)
+            }
+        )
     }
 
     var body: some View {
@@ -51,18 +60,11 @@ struct OnboardingView: View {
             .navigationBarBackButtonHidden(true)
         }
         .background(Color.white)
-        .task(id: selectedPhoto) {
-            guard let selectedPhoto else { return }
-            selectedImageData = try? await selectedPhoto.loadTransferable(type: Data.self)
-        }
         .task(id: firstItemPhoto) {
             guard let firstItemPhoto else { return }
             firstItemImageData = try? await firstItemPhoto.loadTransferable(type: Data.self)
         }
         .onAppear {
-            if selectedImageData == nil {
-                selectedImageData = draft.logoImageData
-            }
             if firstItemImageData == nil {
                 firstItemImageData = draft.firstItemImageData
             }
@@ -73,17 +75,17 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(stepEyebrow)
-                    .font(.wix(12, weight: .semiBold))
+                    .font(.wix(12, wixWeight: .semiBold))
                     .foregroundStyle(.black.opacity(0.42))
                     .tracking(0.2)
 
                 Text(step.title)
-                    .font(.wix(32, weight: .bold))
+                    .font(.wix(32, wixWeight: .bold))
                     .foregroundStyle(.black)
                     .tracking(-0.7)
 
                 Text(step.subtitle)
-                    .font(.wix(15, weight: .regular))
+                    .font(.wix(15, wixWeight: .regular))
                     .foregroundStyle(mutedText)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -92,20 +94,20 @@ struct OnboardingView: View {
                 HStack(spacing: 8) {
                     ForEach(OnboardingStep.allCases, id: \.rawValue) { item in
                         Capsule()
-                            .fill(item.rawValue <= step.rawValue ? Color.black : Color.black.opacity(0.10))
+                            .fill(item.rawValue <= step.rawValue ? accentColor : Color.black.opacity(0.08))
                             .frame(height: 7)
                     }
                 }
 
                 HStack {
                     Text("Krok \(step.rawValue + 1) z \(OnboardingStep.allCases.count)")
-                        .font(.wix(13, weight: .medium))
+                        .font(.wix(13, wixWeight: .medium))
                         .foregroundStyle(secondaryText)
 
                     Spacer()
 
                     Text(progressLabel)
-                        .font(.wix(13, weight: .semiBold))
+                        .font(.wix(13, wixWeight: .semiBold))
                         .foregroundStyle(.black.opacity(0.62))
                 }
             }
@@ -148,15 +150,20 @@ struct OnboardingView: View {
         case .basicInfo:
             BasicInfoStepView(
                 businessName: binding(\.businessName),
-                description: binding(\.description),
                 address: binding(\.address),
-                phone: binding(\.phone),
-                selectedPhoto: $selectedPhoto,
-                selectedImageData: $selectedImageData
+                phone: binding(\.phone)
             )
 
         case .publicLink:
-            PublicLinkStepView(username: binding(\.username))
+            PublicLinkStepView(
+                username: usernameBinding,
+                accentSoft: accentSoft,
+                validationState: auth.usernameValidationState,
+                isBusy: auth.isLoading,
+                onCheckNow: {
+                    await auth.validateUsernameAvailability(force: true)
+                }
+            )
 
         case .legalDetails:
             LegalDetailsStepView(
@@ -181,11 +188,15 @@ struct OnboardingView: View {
                 deliveryArea: binding(\.deliveryArea),
                 cashPaymentAvailable: binding(\.cashPaymentAvailable),
                 cardPaymentAvailable: binding(\.cardPaymentAvailable),
-                blikPaymentAvailable: binding(\.blikPaymentAvailable)
+                blikPaymentAvailable: binding(\.blikPaymentAvailable),
+                accentColor: accentColor
             )
 
         case .openingHours:
-            OpeningHoursStepView(days: binding(\.days))
+            OpeningHoursStepView(
+                days: binding(\.days),
+                accentColor: accentColor
+            )
 
         case .firstMenu:
             FirstMenuStepView(
@@ -206,8 +217,16 @@ struct OnboardingView: View {
         VStack(spacing: 12) {
             if let errorMessage = auth.errorMessage, !errorMessage.isEmpty {
                 Text(errorMessage)
-                    .font(.wix(13, weight: .medium))
+                    .font(.wix(13, wixWeight: .medium))
                     .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
+
+            if let noticeMessage = auth.noticeMessage, !noticeMessage.isEmpty {
+                Text(noticeMessage)
+                    .font(.wix(13, wixWeight: .medium))
+                    .foregroundStyle(.orange)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
             }
@@ -220,7 +239,7 @@ struct OnboardingView: View {
                         }
                     } label: {
                         Text("Wstecz")
-                            .font(.wix(16, weight: .semiBold))
+                            .font(.wix(16, wixWeight: .semiBold))
                             .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)
                             .frame(height: 58)
@@ -236,29 +255,41 @@ struct OnboardingView: View {
                 }
 
                 Button {
+                    guard !isSubmittingFinish else { return }
+
                     Task {
+                        if step == .finish {
+                            isSubmittingFinish = true
+                        }
+
                         await nextAction()
+
+                        isSubmittingFinish = false
                     }
                 } label: {
                     HStack(spacing: 8) {
-                        if auth.isLoading && step == .finish {
+                        if (auth.isLoading || isSubmittingFinish) && step == .finish {
                             ProgressView()
-                                .tint(.white)
+                                .tint(.black)
                                 .scaleEffect(0.9)
                         }
 
                         Text(primaryButtonTitle)
-                            .font(.wix(16, weight: .semiBold))
-                            .foregroundStyle(.white)
+                            .font(.wix(16, wixWeight: .semiBold))
+                            .foregroundStyle(.black)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 58)
                     .background(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(isCurrentStepValid ? Color.black : Color.black.opacity(0.22))
+                            .fill(isCurrentStepValid ? accentColor : Color.black.opacity(0.16))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(isCurrentStepValid ? accentColor.opacity(0.5) : .clear, lineWidth: 1)
                     )
                 }
-                .disabled(!isCurrentStepValid || auth.isLoading)
+                .disabled(!isCurrentStepValid || auth.isLoading || isSubmittingFinish)
             }
             .padding(.horizontal, 20)
             .padding(.top, 10)
@@ -287,10 +318,12 @@ struct OnboardingView: View {
         switch step {
         case .basicInfo:
             return draft.businessName.trimmed.count >= 2 &&
-                   draft.address.trimmed.count >= 3
+                   draft.address.trimmed.count >= 3 &&
+                   draft.phone.trimmed.count >= 6
 
         case .publicLink:
-            return draft.username.slugified.count >= 3
+            return draft.username.slugified.count >= 3 &&
+                   auth.usernameValidationState == .available
 
         case .legalDetails:
             return draft.legalBusinessName.trimmed.count >= 2 &&
@@ -322,6 +355,12 @@ struct OnboardingView: View {
     }
 
     private func nextAction() async {
+        if auth.isLoading {
+            return
+        }
+
+        auth.errorMessage = nil
+
         if step == .basicInfo {
             var updatedDraft = draft
 
@@ -333,8 +372,12 @@ struct OnboardingView: View {
                 updatedDraft.contactPhone = updatedDraft.phone
             }
 
-            updatedDraft.logoImageData = selectedImageData
             draft = updatedDraft
+        }
+
+        if step == .publicLink {
+            let canContinue = await auth.ensureUsernameValidForNextStep()
+            guard canContinue else { return }
         }
 
         if step == .firstMenu {
@@ -363,68 +406,49 @@ struct OnboardingView: View {
 
 private struct BasicInfoStepView: View {
     @Binding var businessName: String
-    @Binding var description: String
     @Binding var address: String
     @Binding var phone: String
-    @Binding var selectedPhoto: PhotosPickerItem?
-    @Binding var selectedImageData: Data?
+
+    private let accentSoft = Color(lmHex: "#5BE47B").opacity(0.14)
 
     var body: some View {
         VStack(spacing: 18) {
             LMHeroCard(
                 title: "Profil lokalu",
-                subtitle: "Dodaj najważniejsze informacje, aby od początku wszystko wyglądało profesjonalnie"
+                subtitle: "Dodaj podstawowe dane widoczne na stronie lokalu i w panelu"
             ) {
-                PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    HStack(spacing: 16) {
-                        Group {
-                            if let selectedImageData,
-                               let uiImage = UIImage(data: selectedImageData) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFill()
-                            } else {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.black.opacity(0.06))
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(accentSoft)
+                            .frame(width: 52, height: 52)
 
-                                    Image(systemName: "camera.fill")
-                                        .font(.system(size: 22, weight: .semibold))
-                                        .foregroundStyle(.black)
-                                }
-                            }
-                        }
-                        .frame(width: 84, height: 84)
-                        .clipShape(Circle())
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Dodaj logo")
-                                .font(.wix(18, weight: .semiBold))
-                                .foregroundStyle(.black)
-
-                            Text("Widoczne w panelu i na stronie publicznej")
-                                .font(.wix(14, weight: .regular))
-                                .foregroundStyle(.black.opacity(0.58))
-
-                            Text("Opcjonalne")
-                                .font(.wix(12, weight: .semiBold))
-                                .foregroundStyle(.black.opacity(0.42))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color.black.opacity(0.05))
-                                .clipShape(Capsule())
-                        }
-
-                        Spacer()
+                        Image(systemName: "storefront.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.black)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Podstawowe informacje")
+                            .font(.wix(17, wixWeight: .semiBold))
+                            .foregroundStyle(.black)
+
+                        Text("Nazwa, adres i numer telefonu będą widoczne dla klientów")
+                            .font(.wix(13, wixWeight: .regular))
+                            .foregroundStyle(.black.opacity(0.58))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
                 }
+                .padding(14)
+                .background(accentSoft)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
 
             LMCard {
                 VStack(spacing: 14) {
                     LMInputField(title: "Nazwa lokalu", text: $businessName)
-                    LMInputField(title: "Krótki opis", text: $description)
                     LMInputField(title: "Adres", text: $address)
                     LMInputField(title: "Telefon", text: $phone, keyboard: .phonePad)
                 }
@@ -435,9 +459,54 @@ private struct BasicInfoStepView: View {
 
 private struct PublicLinkStepView: View {
     @Binding var username: String
+    let accentSoft: Color
+    let validationState: AuthViewModel.UsernameValidationState
+    let isBusy: Bool
+    let onCheckNow: () async -> Void
 
     private var preview: String {
         username.slugified.isEmpty ? "twoj-lokal" : username.slugified
+    }
+
+    private var helperText: String {
+        switch validationState {
+        case .idle:
+            return "Użyj małych liter, cyfr i myślników"
+        case .typing:
+            return "Za chwilę sprawdzimy dostępność linku"
+        case .checking:
+            return "Sprawdzanie dostępności..."
+        case .available:
+            return "Ten link jest dostępny"
+        case .taken:
+            return "Ten link jest już zajęty"
+        case .invalid(let message):
+            return message
+        case .error(let message):
+            return message
+        }
+    }
+
+    private var helperColor: Color {
+        switch validationState {
+        case .available:
+            return Color.green
+        case .taken, .invalid, .error:
+            return Color.red
+        default:
+            return Color.black.opacity(0.48)
+        }
+    }
+
+    private var borderColor: Color {
+        switch validationState {
+        case .available:
+            return Color.green.opacity(0.25)
+        case .taken, .invalid, .error:
+            return Color.red.opacity(0.25)
+        default:
+            return Color.clear
+        }
     }
 
     var body: some View {
@@ -447,11 +516,33 @@ private struct PublicLinkStepView: View {
                 subtitle: "To będzie adres, który udostępnisz klientom w social media i wiadomościach"
             ) {
                 VStack(spacing: 14) {
-                    LMInputField(title: "Nazwa w linku", text: $username)
+                    VStack(alignment: .leading, spacing: 8) {
+                        LMInputField(title: "Nazwa w linku", text: $username)
+
+                        HStack(spacing: 8) {
+                            if case .checking = validationState {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+
+                            Text(helperText)
+                                .font(.wix(13, wixWeight: .medium))
+                                .foregroundStyle(helperColor)
+
+                            Spacer()
+                        }
+                    }
+                    .padding(12)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(borderColor, lineWidth: 1)
+                    )
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Podgląd")
-                            .font(.wix(13, weight: .medium))
+                            .font(.wix(13, wixWeight: .medium))
                             .foregroundStyle(.black.opacity(0.45))
 
                         HStack(spacing: 10) {
@@ -460,7 +551,7 @@ private struct PublicLinkStepView: View {
                                 .foregroundStyle(.black)
 
                             Text("lamenu.pl/\(preview)")
-                                .font(.wix(18, weight: .semiBold))
+                                .font(.wix(18, wixWeight: .semiBold))
                                 .foregroundStyle(.black)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
@@ -468,7 +559,7 @@ private struct PublicLinkStepView: View {
                             Spacer()
                         }
                         .padding(16)
-                        .background(Color.black.opacity(0.04))
+                        .background(accentSoft)
                         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                 }
@@ -479,6 +570,16 @@ private struct PublicLinkStepView: View {
                 title: "Krótko i czytelnie",
                 subtitle: "Prosty link łatwiej zapamiętać i lepiej wygląda w internecie"
             )
+        }
+        .task(id: username) {
+            let normalized = username.slugified
+            guard !normalized.isEmpty else { return }
+            guard normalized.count >= 3 else { return }
+
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            guard !Task.isCancelled else { return }
+
+            await onCheckNow()
         }
     }
 }
@@ -543,6 +644,7 @@ private struct FulfillmentStepView: View {
     @Binding var cashPaymentAvailable: Bool
     @Binding var cardPaymentAvailable: Bool
     @Binding var blikPaymentAvailable: Bool
+    let accentColor: Color
 
     var body: some View {
         VStack(spacing: 18) {
@@ -556,19 +658,21 @@ private struct FulfillmentStepView: View {
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Formy realizacji")
-                        .font(.wix(18, weight: .semiBold))
+                        .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
                     LMToggleRow(
                         title: "Odbiór osobisty",
                         subtitle: "Klient odbiera zamówienie na miejscu",
-                        isOn: $pickupAvailable
+                        isOn: $pickupAvailable,
+                        tint: accentColor
                     )
 
                     LMToggleRow(
                         title: "Dostawa",
                         subtitle: "Klient może zamówić z dostawą",
-                        isOn: $deliveryAvailable
+                        isOn: $deliveryAvailable,
+                        tint: accentColor
                     )
 
                     if deliveryAvailable {
@@ -580,25 +684,28 @@ private struct FulfillmentStepView: View {
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Metody płatności")
-                        .font(.wix(18, weight: .semiBold))
+                        .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
                     LMToggleRow(
                         title: "Gotówka",
                         subtitle: "Płatność gotówką przy odbiorze lub dostawie",
-                        isOn: $cashPaymentAvailable
+                        isOn: $cashPaymentAvailable,
+                        tint: accentColor
                     )
 
                     LMToggleRow(
                         title: "Karta",
                         subtitle: "Płatność kartą",
-                        isOn: $cardPaymentAvailable
+                        isOn: $cardPaymentAvailable,
+                        tint: accentColor
                     )
 
                     LMToggleRow(
                         title: "BLIK",
                         subtitle: "Płatność BLIK",
-                        isOn: $blikPaymentAvailable
+                        isOn: $blikPaymentAvailable,
+                        tint: accentColor
                     )
                 }
             }
@@ -608,6 +715,7 @@ private struct FulfillmentStepView: View {
 
 private struct OpeningHoursStepView: View {
     @Binding var days: [DayHoursDraft]
+    let accentColor: Color
 
     var body: some View {
         VStack(spacing: 14) {
@@ -615,22 +723,7 @@ private struct OpeningHoursStepView: View {
                 title: "Godziny otwarcia",
                 subtitle: "Klienci od razu zobaczą, kiedy lokal przyjmuje zamówienia"
             ) {
-                Button {
-                    applySameHoursToAll()
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "arrow.trianglehead.2.clockwise")
-                            .font(.system(size: 14, weight: .semibold))
-
-                        Text("Zastosuj godziny z pierwszego dnia do wszystkich")
-                            .font(.wix(15, weight: .semiBold))
-                    }
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Color.black.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                }
+                EmptyView()
             }
 
             ForEach($days) { $day in
@@ -639,19 +732,25 @@ private struct OpeningHoursStepView: View {
                         HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(day.title)
-                                    .font(.wix(18, weight: .semiBold))
+                                    .font(.wix(18, wixWeight: .semiBold))
                                     .foregroundStyle(.black)
 
-                                Text(day.isClosed ? "Zamknięte" : "Lokal otwarty")
-                                    .font(.wix(13, weight: .regular))
+                                Text(day.isClosed ? "Lokal zamknięty" : "Lokal otwarty")
+                                    .font(.wix(13, wixWeight: .regular))
                                     .foregroundStyle(.black.opacity(0.48))
                             }
 
                             Spacer()
 
-                            Toggle("", isOn: $day.isClosed)
-                                .labelsHidden()
-                                .tint(.black)
+                            Toggle(
+                                "",
+                                isOn: Binding(
+                                    get: { !day.isClosed },
+                                    set: { day.isClosed = !$0 }
+                                )
+                            )
+                            .labelsHidden()
+                            .tint(accentColor)
                         }
 
                         if !day.isClosed {
@@ -663,18 +762,6 @@ private struct OpeningHoursStepView: View {
                     }
                 }
             }
-        }
-    }
-
-    private func applySameHoursToAll() {
-        guard let firstOpen = days.first?.openDate,
-              let firstClose = days.first?.closeDate,
-              let firstClosed = days.first?.isClosed else { return }
-
-        for index in days.indices {
-            days[index].openDate = firstOpen
-            days[index].closeDate = firstClose
-            days[index].isClosed = firstClosed
         }
     }
 }
@@ -699,7 +786,7 @@ private struct FirstMenuStepView: View {
             LMCard {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Kategoria")
-                        .font(.wix(18, weight: .semiBold))
+                        .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
                     LMInputField(title: "Utwórz kategorię", text: $categoryName)
@@ -709,7 +796,7 @@ private struct FirstMenuStepView: View {
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Pierwsza pozycja")
-                        .font(.wix(18, weight: .semiBold))
+                        .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
                     PhotosPicker(selection: $firstItemPhoto, matching: .images) {
@@ -731,7 +818,7 @@ private struct FirstMenuStepView: View {
                                                 .foregroundStyle(.black)
 
                                             Text("Dodaj zdjęcie")
-                                                .font(.wix(13, weight: .semiBold))
+                                                .font(.wix(13, wixWeight: .semiBold))
                                                 .foregroundStyle(.black)
                                         }
                                     }
@@ -742,15 +829,15 @@ private struct FirstMenuStepView: View {
 
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Zdjęcie pozycji")
-                                    .font(.wix(17, weight: .semiBold))
+                                    .font(.wix(17, wixWeight: .semiBold))
                                     .foregroundStyle(.black)
 
                                 Text("Klienci zobaczą je na stronie menu")
-                                    .font(.wix(14, weight: .regular))
+                                    .font(.wix(14, wixWeight: .regular))
                                     .foregroundStyle(.black.opacity(0.58))
 
                                 Text("Opcjonalne")
-                                    .font(.wix(12, weight: .semiBold))
+                                    .font(.wix(12, wixWeight: .semiBold))
                                     .foregroundStyle(.black.opacity(0.42))
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 6)
@@ -852,20 +939,20 @@ private struct FinishStepView: View {
         LMCard {
             VStack(alignment: .leading, spacing: 16) {
                 Text(title)
-                    .font(.wix(20, weight: .bold))
+                    .font(.wix(20, wixWeight: .bold))
                     .foregroundStyle(.black)
 
                 VStack(spacing: 14) {
                     ForEach(rows, id: \.0) { row in
                         HStack(alignment: .top, spacing: 12) {
                             Text(row.0)
-                                .font(.wix(14, weight: .medium))
+                                .font(.wix(14, wixWeight: .medium))
                                 .foregroundStyle(.black.opacity(0.45))
 
                             Spacer(minLength: 12)
 
                             Text(row.1)
-                                .font(.wix(15, weight: .semiBold))
+                                .font(.wix(15, wixWeight: .semiBold))
                                 .foregroundStyle(.black)
                                 .multilineTextAlignment(.trailing)
                         }
@@ -885,12 +972,12 @@ private struct LMHeroCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .font(.wix(24, weight: .bold))
+                    .font(.wix(24, wixWeight: .bold))
                     .foregroundStyle(.black)
                     .tracking(-0.3)
 
                 Text(subtitle)
-                    .font(.wix(14, weight: .regular))
+                    .font(.wix(14, wixWeight: .regular))
                     .foregroundStyle(.black.opacity(0.58))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -943,11 +1030,11 @@ private struct LMInfoCard: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.wix(16, weight: .semiBold))
+                    .font(.wix(16, wixWeight: .semiBold))
                     .foregroundStyle(.black)
 
                 Text(subtitle)
-                    .font(.wix(14, weight: .regular))
+                    .font(.wix(14, wixWeight: .regular))
                     .foregroundStyle(.black.opacity(0.58))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -972,11 +1059,11 @@ private struct LMInputField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.wix(13, weight: .medium))
+                .font(.wix(13, wixWeight: .medium))
                 .foregroundStyle(.black.opacity(0.45))
 
             TextField(title, text: $text)
-                .font(.wix(16, weight: .medium))
+                .font(.wix(16, wixWeight: .medium))
                 .foregroundStyle(.black)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -993,16 +1080,17 @@ private struct LMToggleRow: View {
     let title: String
     let subtitle: String
     @Binding var isOn: Bool
+    let tint: Color
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             VStack(alignment: .leading, spacing: 5) {
                 Text(title)
-                    .font(.wix(16, weight: .semiBold))
+                    .font(.wix(16, wixWeight: .semiBold))
                     .foregroundStyle(.black)
 
                 Text(subtitle)
-                    .font(.wix(13, weight: .regular))
+                    .font(.wix(13, wixWeight: .regular))
                     .foregroundStyle(.black.opacity(0.52))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1011,7 +1099,7 @@ private struct LMToggleRow: View {
 
             Toggle("", isOn: $isOn)
                 .labelsHidden()
-                .tint(.black)
+                .tint(tint)
         }
         .padding(16)
         .background(Color.black.opacity(0.04))
@@ -1026,7 +1114,7 @@ private struct LMTimePickerCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.wix(13, weight: .medium))
+                .font(.wix(13, wixWeight: .medium))
                 .foregroundStyle(.black.opacity(0.45))
 
             DatePicker(
@@ -1047,8 +1135,8 @@ private struct LMTimePickerCard: View {
 }
 
 private extension Font {
-    static func wix(_ size: CGFloat, weight: WixWeight = .regular) -> Font {
-        Font.custom(weight.fontName, size: size)
+    static func wix(_ size: CGFloat, wixWeight: WixWeight = .regular) -> Font {
+        .custom(wixWeight.fontName, size: size)
     }
 }
 
@@ -1061,11 +1149,16 @@ private enum WixWeight {
 
     var fontName: String {
         switch self {
-        case .regular: return "WixMadeforDisplay-Regular"
-        case .medium: return "WixMadeforDisplay-Medium"
-        case .semiBold: return "WixMadeforDisplay-SemiBold"
-        case .bold: return "WixMadeforDisplay-Bold"
-        case .extraBold: return "WixMadeforDisplay-ExtraBold"
+        case .regular:
+            return "WixMadeforDisplay-Regular"
+        case .medium:
+            return "WixMadeforDisplay-Medium"
+        case .semiBold:
+            return "WixMadeforDisplay-SemiBold"
+        case .bold:
+            return "WixMadeforDisplay-Bold"
+        case .extraBold:
+            return "WixMadeforDisplay-ExtraBold"
         }
     }
 }
@@ -1081,5 +1174,48 @@ private extension String {
             .folding(options: .diacriticInsensitive, locale: .current)
             .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
             .replacingOccurrences(of: "^-+|-+$", with: "", options: .regularExpression)
+    }
+}
+
+private extension Color {
+    init(lmHex: String) {
+        let hex = lmHex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3:
+            (a, r, g, b) = (
+                255,
+                (int >> 8) * 17,
+                (int >> 4 & 0xF) * 17,
+                (int & 0xF) * 17
+            )
+        case 6:
+            (a, r, g, b) = (
+                255,
+                int >> 16,
+                int >> 8 & 0xFF,
+                int & 0xFF
+            )
+        case 8:
+            (a, r, g, b) = (
+                int >> 24,
+                int >> 16 & 0xFF,
+                int >> 8 & 0xFF,
+                int & 0xFF
+            )
+        default:
+            (a, r, g, b) = (255, 0, 0, 0)
+        }
+
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
     }
 }

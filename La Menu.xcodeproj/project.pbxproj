@@ -132,11 +132,12 @@
 				};
 			};
 			buildConfigurationList = 73634AB12F7442F200727450 /* Build configuration list for PBXProject "La Menu" */;
-			developmentRegion = en;
+			developmentRegion = pl;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
+				pl,
 			);
 			mainGroup = 73634AAD2F7442F200727450;
 			minimizedProjectReferenceProxies = 1;

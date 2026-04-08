@@ -27,6 +27,11 @@ private struct CreateProfilePayload: Encodable {
     let is_active: Bool
     let pickup_enabled: Bool
     let delivery_enabled: Bool
+    let accent_color: String
+    let is_accepting_orders: Bool
+    let slot_interval_minutes: Int
+    let delivery_price_per_km: Double?
+    let sms_confirmation_enabled: Bool
 }
 
 private struct UpdateProfilePayload: Encodable {
@@ -40,6 +45,11 @@ private struct UpdateProfilePayload: Encodable {
     let is_active: Bool
     let pickup_enabled: Bool
     let delivery_enabled: Bool
+    let accent_color: String
+    let is_accepting_orders: Bool
+    let slot_interval_minutes: Int
+    let delivery_price_per_km: Double?
+    let sms_confirmation_enabled: Bool
 }
 
 private struct CreateBusinessHourPayload: Encodable {
@@ -158,16 +168,12 @@ final class AuthViewModel {
         "polityka-cookies"
     ]
 
-    // MARK: - Session
-
     func checkSession() async {
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
 
-        defer {
-            isLoading = false
-        }
+        defer { isLoading = false }
 
         do {
             let session = try await SupabaseManager.shared.auth.session
@@ -183,8 +189,6 @@ final class AuthViewModel {
         }
     }
 
-    // MARK: - Email / Password
-
     func signIn(email: String, password: String) async {
         guard !email.trimmed.isEmpty, !password.isEmpty else {
             errorMessage = "Wpisz e-mail i hasło."
@@ -195,9 +199,7 @@ final class AuthViewModel {
         errorMessage = nil
         noticeMessage = nil
 
-        defer {
-            isLoading = false
-        }
+        defer { isLoading = false }
 
         do {
             let result = try await SupabaseManager.shared.auth.signIn(
@@ -225,9 +227,7 @@ final class AuthViewModel {
         errorMessage = nil
         noticeMessage = nil
 
-        defer {
-            isLoading = false
-        }
+        defer { isLoading = false }
 
         do {
             let result = try await SupabaseManager.shared.auth.signUp(
@@ -246,8 +246,6 @@ final class AuthViewModel {
         }
     }
 
-    // MARK: - Apple Sign In
-
     func signInWithApple(
         idToken: String,
         rawNonce: String,
@@ -259,9 +257,7 @@ final class AuthViewModel {
         errorMessage = nil
         noticeMessage = nil
 
-        defer {
-            isLoading = false
-        }
+        defer { isLoading = false }
 
         do {
             let result = try await SupabaseManager.shared.auth.signInWithIdToken(
@@ -332,8 +328,6 @@ final class AuthViewModel {
         return data
     }
 
-    // MARK: - Profile
-
     func loadProfileStatus() async {
         guard let currentUserId else {
             needsOnboarding = false
@@ -368,8 +362,6 @@ final class AuthViewModel {
             needsOnboarding = true
         }
     }
-
-    // MARK: - Username validation
 
     func updateUsernameDraft(_ rawValue: String) {
         let normalized = rawValue.slugified
@@ -460,8 +452,6 @@ final class AuthViewModel {
         }
     }
 
-    // MARK: - NIP warning
-
     func refreshNIPWarning() async {
         noticeMessage = nil
 
@@ -481,11 +471,8 @@ final class AuthViewModel {
 
             noticeMessage = "Ten NIP jest już używany w lokalu „\(displayName)”. Możesz mimo to kontynuować."
         } catch {
-            // warning check should never block user
         }
     }
-
-    // MARK: - Onboarding
 
     func completeOnboarding() async {
         await completeOnboarding(draft: onboardingDraft)
@@ -499,15 +486,16 @@ final class AuthViewModel {
         errorMessage = nil
         noticeMessage = nil
 
-        defer {
-            isLoading = false
-        }
+        defer { isLoading = false }
 
         do {
             try validateDraftForCompletion(draft)
 
             let username = draft.username.slugified
             let businessName = draft.businessName.trimmed
+            let deliveryPricePerKmValue = Double(
+                draft.deliveryPricePerKm.replacingOccurrences(of: ",", with: ".")
+            )
 
             let existingOwnedProfileId = try await fetchExistingOwnedProfileId()
             let isAvailable = try await isUsernameAvailable(username, excludingProfileId: existingOwnedProfileId)
@@ -565,7 +553,12 @@ final class AuthViewModel {
                     onboarding_completed: true,
                     is_active: true,
                     pickup_enabled: draft.pickupAvailable,
-                    delivery_enabled: draft.deliveryAvailable
+                    delivery_enabled: draft.deliveryAvailable,
+                    accent_color: draft.accentColorHex,
+                    is_accepting_orders: draft.isAcceptingOrders,
+                    slot_interval_minutes: draft.slotIntervalMinutes,
+                    delivery_price_per_km: draft.deliveryAvailable ? deliveryPricePerKmValue : nil,
+                    sms_confirmation_enabled: draft.smsConfirmationEnabled
                 )
 
                 savedProfile = try await SupabaseManager.shared
@@ -594,7 +587,12 @@ final class AuthViewModel {
                     onboarding_completed: true,
                     is_active: true,
                     pickup_enabled: draft.pickupAvailable,
-                    delivery_enabled: draft.deliveryAvailable
+                    delivery_enabled: draft.deliveryAvailable,
+                    accent_color: draft.accentColorHex,
+                    is_accepting_orders: draft.isAcceptingOrders,
+                    slot_interval_minutes: draft.slotIntervalMinutes,
+                    delivery_price_per_km: draft.deliveryAvailable ? deliveryPricePerKmValue : nil,
+                    sms_confirmation_enabled: draft.smsConfirmationEnabled
                 )
 
                 savedProfile = try await SupabaseManager.shared
@@ -776,16 +774,12 @@ final class AuthViewModel {
         }
     }
 
-    // MARK: - Sign out
-
     func signOut() async {
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
 
-        defer {
-            isLoading = false
-        }
+        defer { isLoading = false }
 
         do {
             try await SupabaseManager.shared.auth.signOut()
@@ -800,8 +794,6 @@ final class AuthViewModel {
             errorMessage = "Nie udało się wylogować."
         }
     }
-
-    // MARK: - Helpers
 
     func resetOnboardingState() {
         onboardingDraft = OnboardingDraft()
@@ -820,6 +812,16 @@ final class AuthViewModel {
         onboardingDraft.address = profile.address ?? ""
         onboardingDraft.phone = profile.phone ?? ""
         onboardingDraft.username = profile.username.slugified
+        onboardingDraft.accentColorHex = profile.accentColor ?? "#FF0043"
+        onboardingDraft.isAcceptingOrders = profile.isAcceptingOrders
+        onboardingDraft.slotIntervalMinutes = profile.slotIntervalMinutes ?? 15
+        onboardingDraft.smsConfirmationEnabled = profile.smsConfirmationEnabled
+
+        if let deliveryPrice = profile.deliveryPricePerKm {
+            onboardingDraft.deliveryPricePerKm = String(format: "%.2f", deliveryPrice)
+                .replacingOccurrences(of: ".", with: ",")
+        }
+
         usernameValidationState = .available
         lastCheckedUsername = profile.username.slugified
     }
@@ -845,6 +847,10 @@ final class AuthViewModel {
 
         guard !reservedUsernames.contains(username) else {
             throw Self.makeFriendlyError("Ten link nie jest dostępny. Wybierz inny.")
+        }
+
+        guard draft.accentColorHex.trimmed.hasPrefix("#"), draft.accentColorHex.trimmed.count == 7 else {
+            throw Self.makeFriendlyError("Wybierz poprawny kolor firmowy.")
         }
 
         guard draft.legalBusinessName.trimmed.count >= 2 else {
@@ -895,10 +901,18 @@ final class AuthViewModel {
             guard draft.deliveryArea.trimmed.count >= 2 else {
                 throw Self.makeFriendlyError("Wpisz obszar dostawy.")
             }
+
+            guard Double(draft.deliveryPricePerKm.replacingOccurrences(of: ",", with: ".")) != nil else {
+                throw Self.makeFriendlyError("Wpisz poprawną cenę dostawy za 1 km.")
+            }
         }
 
         guard draft.days.contains(where: { !$0.isClosed }) else {
             throw Self.makeFriendlyError("Ustaw co najmniej jeden aktywny dzień pracy.")
+        }
+
+        guard [5, 10, 15, 20, 30, 45, 60].contains(draft.slotIntervalMinutes) else {
+            throw Self.makeFriendlyError("Wybierz poprawny odstęp slotów.")
         }
 
         guard draft.categoryName.trimmed.count >= 2 else {
@@ -1034,8 +1048,6 @@ final class AuthViewModel {
         )
     }
 }
-
-// MARK: - Extensions
 
 private extension String {
     var trimmed: String {

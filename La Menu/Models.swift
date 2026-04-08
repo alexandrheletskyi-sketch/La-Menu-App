@@ -14,6 +14,14 @@ struct Profile: Codable, Identifiable, Hashable {
     var isActive: Bool
     var isAcceptingOrders: Bool
     var onboardingCompleted: Bool
+
+    var pickupEnabled: Bool
+    var deliveryEnabled: Bool
+    var accentColor: String?
+    var slotIntervalMinutes: Int?
+    var deliveryPricePerKm: Double?
+    var smsConfirmationEnabled: Bool
+
     var createdAt: String
     var updatedAt: String
 
@@ -31,6 +39,14 @@ struct Profile: Codable, Identifiable, Hashable {
         case isActive = "is_active"
         case isAcceptingOrders = "is_accepting_orders"
         case onboardingCompleted = "onboarding_completed"
+
+        case pickupEnabled = "pickup_enabled"
+        case deliveryEnabled = "delivery_enabled"
+        case accentColor = "accent_color"
+        case slotIntervalMinutes = "slot_interval_minutes"
+        case deliveryPricePerKm = "delivery_price_per_km"
+        case smsConfirmationEnabled = "sms_confirmation_enabled"
+
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

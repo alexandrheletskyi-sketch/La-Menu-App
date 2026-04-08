@@ -10,10 +10,16 @@ struct OnboardingView: View {
     @State private var isSubmittingFinish = false
 
     private let pageBackground = Color.white
-    private let accentColor = Color(lmHex: "#5BE47B")
-    private let accentSoft = Color(lmHex: "#5BE47B").opacity(0.14)
     private let mutedText = Color.black.opacity(0.58)
     private let secondaryText = Color.black.opacity(0.42)
+
+    private var accentColor: Color {
+        Color(lmHex: draft.accentColorHex)
+    }
+
+    private var accentSoft: Color {
+        Color(lmHex: draft.accentColorHex).opacity(0.14)
+    }
 
     private var step: OnboardingStep {
         get { auth.onboardingStep }
@@ -125,12 +131,16 @@ struct OnboardingView: View {
             return "Konfiguracja lokalu"
         case .publicLink:
             return "Link publiczny"
+        case .brandColor:
+            return "Wygląd marki"
         case .legalDetails:
             return "Dokumenty i polityki"
         case .fulfillment:
             return "Ustawienia sprzedaży"
         case .openingHours:
             return "Godziny otwarcia"
+        case .orderSettings:
+            return "Przyjmowanie zamówień"
         case .firstMenu:
             return "Pierwsza kategoria i pozycja"
         case .finish:
@@ -165,6 +175,11 @@ struct OnboardingView: View {
                 }
             )
 
+        case .brandColor:
+            BrandColorStepView(
+                accentColorHex: binding(\.accentColorHex)
+            )
+
         case .legalDetails:
             LegalDetailsStepView(
                 legalBusinessName: binding(\.legalBusinessName),
@@ -186,6 +201,7 @@ struct OnboardingView: View {
                 pickupAvailable: binding(\.pickupAvailable),
                 deliveryAvailable: binding(\.deliveryAvailable),
                 deliveryArea: binding(\.deliveryArea),
+                deliveryPricePerKm: binding(\.deliveryPricePerKm),
                 cashPaymentAvailable: binding(\.cashPaymentAvailable),
                 cardPaymentAvailable: binding(\.cardPaymentAvailable),
                 blikPaymentAvailable: binding(\.blikPaymentAvailable),
@@ -195,6 +211,14 @@ struct OnboardingView: View {
         case .openingHours:
             OpeningHoursStepView(
                 days: binding(\.days),
+                accentColor: accentColor
+            )
+
+        case .orderSettings:
+            OrderSettingsStepView(
+                isAcceptingOrders: binding(\.isAcceptingOrders),
+                smsConfirmationEnabled: binding(\.smsConfirmationEnabled),
+                slotIntervalMinutes: binding(\.slotIntervalMinutes),
                 accentColor: accentColor
             )
 
@@ -325,6 +349,10 @@ struct OnboardingView: View {
             return draft.username.slugified.count >= 3 &&
                    auth.usernameValidationState == .available
 
+        case .brandColor:
+            return draft.accentColorHex.trimmed.hasPrefix("#") &&
+                   draft.accentColorHex.trimmed.count == 7
+
         case .legalDetails:
             return draft.legalBusinessName.trimmed.count >= 2 &&
                    draft.businessDisplayName.trimmed.count >= 2 &&
@@ -338,11 +366,16 @@ struct OnboardingView: View {
         case .fulfillment:
             let hasPaymentMethod = draft.cashPaymentAvailable || draft.cardPaymentAvailable || draft.blikPaymentAvailable
             let hasFulfillment = draft.pickupAvailable || draft.deliveryAvailable
-            let deliveryOk = !draft.deliveryAvailable || draft.deliveryArea.trimmed.count >= 2
-            return hasFulfillment && hasPaymentMethod && deliveryOk
+            let deliveryAreaOk = !draft.deliveryAvailable || draft.deliveryArea.trimmed.count >= 2
+            let deliveryPriceOk = !draft.deliveryAvailable || Double(draft.deliveryPricePerKm.replacingOccurrences(of: ",", with: ".")) != nil
+
+            return hasFulfillment && hasPaymentMethod && deliveryAreaOk && deliveryPriceOk
 
         case .openingHours:
             return draft.days.contains(where: { !$0.isClosed })
+
+        case .orderSettings:
+            return [5, 10, 15, 20, 30, 45, 60].contains(draft.slotIntervalMinutes)
 
         case .firstMenu:
             return draft.categoryName.trimmed.count >= 2 &&
@@ -584,6 +617,100 @@ private struct PublicLinkStepView: View {
     }
 }
 
+private struct BrandColorStepView: View {
+    @Binding var accentColorHex: String
+
+    private let presets: [String] = [
+        "#FF0043",
+        "#FE592A",
+        "#5BE47B",
+        "#111111",
+        "#3B82F6",
+        "#8B5CF6"
+    ]
+
+    private var selectedColorBinding: Binding<Color> {
+        Binding(
+            get: { Color(lmHex: accentColorHex) },
+            set: { newValue in
+                accentColorHex = newValue.toHexString() ?? "#FF0043"
+            }
+        )
+    }
+
+    var body: some View {
+        VStack(spacing: 18) {
+            LMHeroCard(
+                title: "Wybierz kolor firmowy",
+                subtitle: "Ten kolor będzie używany w przyciskach, akcentach i elementach marki"
+            ) {
+                EmptyView()
+            }
+
+            LMCard {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("Kolor marki")
+                        .font(.wix(18, wixWeight: .semiBold))
+                        .foregroundStyle(.black)
+
+                    ColorPicker("Wybierz kolor", selection: selectedColorBinding, supportsOpacity: false)
+                        .font(.wix(16, wixWeight: .medium))
+                        .foregroundStyle(.black)
+
+                    HStack(spacing: 12) {
+                        ForEach(presets, id: \.self) { hex in
+                            Button {
+                                accentColorHex = hex
+                            } label: {
+                                Circle()
+                                    .fill(Color(lmHex: hex))
+                                    .frame(width: 34, height: 34)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(
+                                                accentColorHex.lowercased() == hex.lowercased()
+                                                ? Color.black
+                                                : Color.clear,
+                                                lineWidth: 2
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    HStack(spacing: 14) {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color(lmHex: accentColorHex))
+                            .frame(width: 62, height: 62)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Wybrany kolor")
+                                .font(.wix(13, wixWeight: .medium))
+                                .foregroundStyle(.black.opacity(0.45))
+
+                            Text(accentColorHex.uppercased())
+                                .font(.wix(18, wixWeight: .bold))
+                                .foregroundStyle(.black)
+                        }
+
+                        Spacer()
+                    }
+                    .padding(14)
+                    .background(Color.black.opacity(0.04))
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+            }
+
+            LMInfoCard(
+                icon: "paintpalette.fill",
+                title: "Kolor marki",
+                subtitle: "Możesz go później zmienić w panelu ustawień profilu"
+            )
+        }
+    }
+}
+
 private struct LegalDetailsStepView: View {
     @Binding var legalBusinessName: String
     @Binding var businessDisplayName: String
@@ -641,6 +768,7 @@ private struct FulfillmentStepView: View {
     @Binding var pickupAvailable: Bool
     @Binding var deliveryAvailable: Bool
     @Binding var deliveryArea: String
+    @Binding var deliveryPricePerKm: String
     @Binding var cashPaymentAvailable: Bool
     @Binding var cardPaymentAvailable: Bool
     @Binding var blikPaymentAvailable: Bool
@@ -650,7 +778,7 @@ private struct FulfillmentStepView: View {
         VStack(spacing: 18) {
             LMHeroCard(
                 title: "Realizacja i płatność",
-                subtitle: "Ustaw dostępne formy odbioru i płatności widoczne w dokumentach i checkoutcie"
+                subtitle: "Ustaw dostępne formy odbioru, dostawę i metody płatności"
             ) {
                 EmptyView()
             }
@@ -677,6 +805,16 @@ private struct FulfillmentStepView: View {
 
                     if deliveryAvailable {
                         LMInputField(title: "Obszar dostawy", text: $deliveryArea)
+
+                        LMInputField(
+                            title: "Cena za 1 km",
+                            text: $deliveryPricePerKm,
+                            keyboard: .decimalPad
+                        )
+
+                        Text("Ta stawka będzie widoczna przy zamówieniu z dostawą")
+                            .font(.wix(13, wixWeight: .regular))
+                            .foregroundStyle(.black.opacity(0.5))
                     }
                 }
             }
@@ -760,6 +898,93 @@ private struct OpeningHoursStepView: View {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+private struct OrderSettingsStepView: View {
+    @Binding var isAcceptingOrders: Bool
+    @Binding var smsConfirmationEnabled: Bool
+    @Binding var slotIntervalMinutes: Int
+    let accentColor: Color
+
+    private let slotOptions = [5, 10, 15, 20, 30, 45, 60]
+
+    var body: some View {
+        VStack(spacing: 18) {
+            LMHeroCard(
+                title: "Przyjmowanie zamówień",
+                subtitle: "Włącz lub wyłącz zamówienia, ustaw odstęp między slotami i wybierz, czy klient ma dostać SMS po złożeniu zamówienia"
+            ) {
+                EmptyView()
+            }
+
+            LMCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Status zamówień")
+                        .font(.wix(18, wixWeight: .semiBold))
+                        .foregroundStyle(.black)
+
+                    LMToggleRow(
+                        title: "Zamówienia przyjmowane",
+                        subtitle: "Gdy wyłączone, klienci zobaczą informację, że lokal chwilowo nie przyjmuje zamówień",
+                        isOn: $isAcceptingOrders,
+                        tint: accentColor
+                    )
+                }
+            }
+
+            LMCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Powiadomienia SMS")
+                        .font(.wix(18, wixWeight: .semiBold))
+                        .foregroundStyle(.black)
+
+                    LMToggleRow(
+                        title: "SMS z potwierdzeniem zamówienia",
+                        subtitle: "Po złożeniu zamówienia klient dostanie wiadomość SMS na podany numer telefonu",
+                        isOn: $smsConfirmationEnabled,
+                        tint: accentColor
+                    )
+                }
+            }
+
+            LMCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Sloty czasowe")
+                        .font(.wix(18, wixWeight: .semiBold))
+                        .foregroundStyle(.black)
+
+                    Text("Odstęp między slotami")
+                        .font(.wix(13, wixWeight: .medium))
+                        .foregroundStyle(.black.opacity(0.45))
+
+                    Menu {
+                        ForEach(slotOptions, id: \.self) { value in
+                            Button("\(value) min") {
+                                slotIntervalMinutes = value
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("\(slotIntervalMinutes) min")
+                                .font(.wix(16, wixWeight: .semiBold))
+                                .foregroundStyle(.black)
+
+                            Spacer()
+
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.black.opacity(0.5))
+                        }
+                        .padding(.horizontal, 16)
+                        .frame(height: 56)
+                        .background(Color.black.opacity(0.04))
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -897,6 +1122,13 @@ private struct FinishStepView: View {
             )
 
             summaryCard(
+                title: "Kolor marki",
+                rows: [
+                    ("Kolor", draft.accentColorHex.uppercased())
+                ]
+            )
+
+            summaryCard(
                 title: "Dane prawne",
                 rows: [
                     ("Firma", draft.legalBusinessName),
@@ -913,12 +1145,22 @@ private struct FinishStepView: View {
                     ("Odbiór", draft.pickupAvailable ? "Tak" : "Nie"),
                     ("Dostawa", draft.deliveryAvailable ? "Tak" : "Nie"),
                     ("Obszar dostawy", draft.deliveryAvailable ? draft.deliveryArea : "—"),
+                    ("Cena dostawy / 1 km", draft.deliveryAvailable ? "\(draft.deliveryPricePerKm) zł" : "—"),
                     ("Gotówka", draft.cashPaymentAvailable ? "Tak" : "Nie"),
                     ("Karta", draft.cardPaymentAvailable ? "Tak" : "Nie"),
                     ("BLIK", draft.blikPaymentAvailable ? "Tak" : "Nie")
                 ]
             )
 
+            summaryCard(
+                title: "Przyjmowanie zamówień",
+                rows: [
+                    ("Status", draft.isAcceptingOrders ? "Włączone" : "Wyłączone"),
+                    ("SMS", draft.smsConfirmationEnabled ? "Włączone" : "Wyłączone"),
+                    ("Sloty", "\(draft.slotIntervalMinutes) min")
+                ]
+            )
+            
             summaryCard(
                 title: "Pierwsza kategoria i pozycja",
                 rows: [
@@ -1216,6 +1458,25 @@ private extension Color {
             green: Double(g) / 255,
             blue: Double(b) / 255,
             opacity: Double(a) / 255
+        )
+    }
+
+    func toHexString() -> String? {
+        let uiColor = UIColor(self)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+
+        guard uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+            return nil
+        }
+
+        return String(
+            format: "#%02X%02X%02X",
+            Int(red * 255),
+            Int(green * 255),
+            Int(blue * 255)
         )
     }
 }

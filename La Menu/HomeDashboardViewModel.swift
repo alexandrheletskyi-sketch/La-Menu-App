@@ -114,6 +114,12 @@ final class HomeDashboardViewModel {
                 isActive: profile.isActive,
                 isAcceptingOrders: newValue,
                 onboardingCompleted: profile.onboardingCompleted,
+                pickupEnabled: profile.pickupEnabled,
+                deliveryEnabled: profile.deliveryEnabled,
+                accentColor: profile.accentColor,
+                slotIntervalMinutes: profile.slotIntervalMinutes,
+                deliveryPricePerKm: profile.deliveryPricePerKm,
+                smsConfirmationEnabled: profile.smsConfirmationEnabled,
                 createdAt: profile.createdAt,
                 updatedAt: profile.updatedAt
             )

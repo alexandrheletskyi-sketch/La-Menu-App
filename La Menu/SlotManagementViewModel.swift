@@ -24,11 +24,9 @@ final class SlotManagementViewModel {
     }
 
     var availableDates: [Date] {
-        guard let settings else { return [] }
-
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
-        let count = max(settings.daysAhead, 1)
+        let count = max(settings?.daysAhead ?? 7, 1)
 
         return (0..<count).compactMap { offset in
             calendar.date(byAdding: .day, value: offset, to: today)
@@ -45,7 +43,13 @@ final class SlotManagementViewModel {
         }
 
         do {
-            settings = try await service.fetchSettings(profileId: profileId)
+            let fetchedSettings = try await service.fetchSettings(profileId: profileId)
+            settings = fetchedSettings
+
+            if !availableDates.contains(where: { Calendar.current.isDate($0, inSameDayAs: selectedDate) }) {
+                selectedDate = Calendar.current.startOfDay(for: .now)
+            }
+
             await loadDateOverride()
             await loadSlots()
         } catch {
@@ -102,14 +106,21 @@ final class SlotManagementViewModel {
             isSavingSettings = false
         }
 
+        settings.slotDurationMinutes = max(settings.slotDurationMinutes, 5)
         settings.defaultCapacity = max(settings.defaultCapacity, 1)
         settings.daysAhead = max(settings.daysAhead, 1)
         settings.leadTimeMinutes = max(settings.leadTimeMinutes, 0)
+
+        if settings.allowAsap == false {
+            settings.earliestPickupTimeText = ""
+        }
 
         do {
             try await service.updateSettings(settings)
             self.settings = settings
             successMessage = "Ustawienia zapisane"
+
+            await loadDateOverride()
             await loadSlots()
         } catch {
             errorMessage = "Nie udało się zapisać ustawień: \(error.localizedDescription)"
@@ -154,6 +165,7 @@ final class SlotManagementViewModel {
 
             dateOverrideDraft = .empty
             successMessage = "Przywrócono bazowy harmonogram dnia"
+
             await loadDateOverride()
             await loadSlots()
         } catch {
@@ -168,8 +180,9 @@ final class SlotManagementViewModel {
         do {
             try await service.setSlotBlocked(
                 profileId: profileId,
+                date: selectedDate,
                 fulfillmentType: selectedFulfillmentType,
-                slot: asAvailableSlot(slot),
+                slot: slot,
                 blocked: blocked
             )
 
@@ -190,16 +203,18 @@ final class SlotManagementViewModel {
             if trimmed.isEmpty {
                 try await service.setSlotCapacityOverride(
                     profileId: profileId,
+                    date: selectedDate,
                     fulfillmentType: selectedFulfillmentType,
-                    slot: asAvailableSlot(slot),
+                    slot: slot,
                     capacity: nil
                 )
                 successMessage = "Usunięto limit dla slotu"
             } else if let capacity = Int(trimmed), capacity >= 1 {
                 try await service.setSlotCapacityOverride(
                     profileId: profileId,
+                    date: selectedDate,
                     fulfillmentType: selectedFulfillmentType,
-                    slot: asAvailableSlot(slot),
+                    slot: slot,
                     capacity: capacity
                 )
                 successMessage = "Zapisano limit dla slotu"
@@ -215,31 +230,24 @@ final class SlotManagementViewModel {
     }
 
     func currentCapacityText(for slot: AdminDaySlot) -> String {
-        slot.hasCapacityOverride ? String(slot.capacity) : ""
+        if let value = slot.capacityOverrideValue {
+            return String(value)
+        }
+        return ""
     }
 
     func handleDateChanged() async {
         successMessage = nil
+        errorMessage = nil
         await loadDateOverride()
         await loadSlots()
     }
 
     func handleFulfillmentChanged() async {
         successMessage = nil
+        errorMessage = nil
         await loadDateOverride()
         await loadSlots()
-    }
-
-    private func asAvailableSlot(_ slot: AdminDaySlot) -> AvailableSlot {
-        AvailableSlot(
-            slotStartRaw: slot.slotStartRaw,
-            slotEndRaw: slot.slotEndRaw,
-            slotLabel: slot.slotLabel,
-            capacity: slot.capacity,
-            taken: slot.taken,
-            remaining: slot.remaining,
-            isAvailable: slot.isAvailable
-        )
     }
 
     private func draft(from override: SlotDateOverride, baseDate: Date) -> SlotDateOverrideDraft {
@@ -258,6 +266,8 @@ final class SlotManagementViewModel {
 
         if let capacityOverride = override.capacityOverride {
             draft.capacityOverride = String(capacityOverride)
+        } else {
+            draft.capacityOverride = ""
         }
 
         draft.note = override.note ?? ""
@@ -266,7 +276,8 @@ final class SlotManagementViewModel {
 
     private static func timeDate(from value: String, baseDate: Date) -> Date? {
         let pieces = value.split(separator: ":")
-        guard pieces.count == 2,
+
+        guard pieces.count >= 2,
               let hour = Int(pieces[0]),
               let minute = Int(pieces[1]) else {
             return nil

@@ -9,6 +9,9 @@ struct SlotManagementView: View {
     private let pageBackground = Color.white
     private let mutedText = Color.black.opacity(0.58)
     private let secondaryText = Color.black.opacity(0.42)
+    private let softFill = Color.black.opacity(0.04)
+    private let accentOrange = Color(red: 1.0, green: 95.0 / 255.0, blue: 43.0 / 255.0)
+    private let accentOrangeSoft = Color(red: 1.0, green: 95.0 / 255.0, blue: 43.0 / 255.0).opacity(0.12)
 
     init(profileId: UUID) {
         _viewModel = State(initialValue: SlotManagementViewModel(profileId: profileId))
@@ -30,7 +33,6 @@ struct SlotManagementView: View {
 
                             if let settings = viewModel.settings {
                                 settingsCard(settings: settings)
-                                fulfillmentCard
                                 dateSelectorCard
                                 dayOverrideCard
                                 slotsCard
@@ -38,11 +40,11 @@ struct SlotManagementView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 14)
-                        .padding(.bottom, 32)
+                        .padding(.bottom, 36)
                     }
                 }
             }
-            .navigationTitle("Sloty zamówień")
+            .navigationTitle("Rozkład zamówień")
             .navigationBarTitleDisplayMode(.inline)
         }
         .task {
@@ -52,6 +54,7 @@ struct SlotManagementView: View {
             SlotCapacityEditorSheet(
                 slot: slot,
                 capacityText: $capacityText,
+                accentOrange: accentOrange,
                 onSave: {
                     Task {
                         await viewModel.saveCapacityOverride(for: slot, capacityText: capacityText)
@@ -66,23 +69,24 @@ struct SlotManagementView: View {
                     }
                 }
             )
-            .presentationDetents([.height(300)])
+            .presentationDetents([.height(320)])
             .presentationDragIndicator(.visible)
         }
     }
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Zarządzaj oknami czasowymi i limitem zamówień dla każdego slotu")
-                .font(.slotWix(14, weight: .regular))
+            Text("Ustaw godziny, sloty, limity i najszybszy możliwy czas odbioru dla klientów")
+                .font(.slotWix(15, weight: .regular))
                 .foregroundStyle(mutedText)
+                .fixedSize(horizontal: false, vertical: true)
 
             if let errorMessage = viewModel.errorMessage, !errorMessage.isEmpty {
-                statusPill(text: errorMessage, color: .red)
+                statusPill(text: errorMessage, foreground: .red, background: .red.opacity(0.10))
             }
 
             if let successMessage = viewModel.successMessage, !successMessage.isEmpty {
-                statusPill(text: successMessage, color: .green)
+                statusPill(text: successMessage, foreground: accentOrange, background: accentOrangeSoft)
             }
         }
     }
@@ -90,20 +94,19 @@ struct SlotManagementView: View {
     private func settingsCard(settings: VenueSlotSettings) -> some View {
         LMCard {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Ustawienia ogólne")
-                    .font(.slotWix(20, weight: .bold))
-                    .foregroundStyle(.black)
+                sectionTitle("Ustawienia ogólne")
 
                 LMToggleRow(
-                    title: "Sloty aktywne",
-                    subtitle: "Po włączeniu klienci będą wybierać konkretną godzinę",
+                    title: "Pozwól na najszybszy odbiór",
+                    subtitle: "Klient będzie mógł wybrać najszybszy dostępny termin bez wskazywania konkretnej godziny",
                     isOn: Binding(
-                        get: { viewModel.settings?.slotsEnabled ?? false },
-                        set: { viewModel.settings?.slotsEnabled = $0 }
-                    )
+                        get: { viewModel.settings?.allowAsap ?? true },
+                        set: { viewModel.settings?.allowAsap = $0 }
+                    ),
+                    accentColor: .green
                 )
 
-                VStack(spacing: 14) {
+                VStack(spacing: 12) {
                     stepperRow(
                         title: "Długość slotu",
                         value: Binding(
@@ -145,14 +148,16 @@ struct SlotManagementView: View {
                     )
                 }
 
-                LMToggleRow(
-                    title: "Pozwól na ASAP",
-                    subtitle: "Opcja na później, jeśli zechcesz dodać szybkie zamówienia bez wybranego slotu",
-                    isOn: Binding(
-                        get: { viewModel.settings?.allowAsap ?? true },
-                        set: { viewModel.settings?.allowAsap = $0 }
+                if settings.allowAsap {
+                    LMInputField(
+                        title: "Najszybszy możliwy odbiór",
+                        subtitle: "Np. 20–25 min lub 30 min. Ten tekst będzie wyświetlany klientowi przy zamówieniu",
+                        text: Binding(
+                            get: { viewModel.settings?.earliestPickupTimeText ?? "" },
+                            set: { viewModel.settings?.earliestPickupTimeText = $0 }
+                        )
                     )
-                )
+                }
 
                 Button {
                     Task {
@@ -172,42 +177,10 @@ struct SlotManagementView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(Color.black)
+                    .background(accentOrange)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
-            }
-        }
-    }
-
-    private var fulfillmentCard: some View {
-        LMCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Typ realizacji")
-                    .font(.slotWix(20, weight: .bold))
-                    .foregroundStyle(.black)
-
-                HStack(spacing: 10) {
-                    ForEach(SlotFulfillmentType.allCases) { type in
-                        Button {
-                            guard viewModel.selectedFulfillmentType != type else { return }
-                            viewModel.selectedFulfillmentType = type
-
-                            Task {
-                                await viewModel.handleFulfillmentChanged()
-                            }
-                        } label: {
-                            Text(type.title)
-                                .font(.slotWix(15, weight: .semiBold))
-                                .foregroundStyle(viewModel.selectedFulfillmentType == type ? .white : .black)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 48)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(viewModel.selectedFulfillmentType == type ? Color.black : Color.black.opacity(0.05))
-                                )
-                        }
-                    }
-                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -215,35 +188,35 @@ struct SlotManagementView: View {
     private var dateSelectorCard: some View {
         LMCard {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Dzień")
-                    .font(.slotWix(20, weight: .bold))
-                    .foregroundStyle(.black)
+                sectionTitle("Dzień")
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(viewModel.availableDates, id: \.self) { date in
-                            Button {
-                                viewModel.selectedDate = date
+                            let isSelected = viewModel.selectedDate.isSameDay(as: date)
 
+                            Button {
                                 Task {
+                                    viewModel.selectedDate = date
                                     await viewModel.handleDateChanged()
                                 }
                             } label: {
                                 VStack(spacing: 6) {
                                     Text(shortWeekday(date))
                                         .font(.slotWix(12, weight: .semiBold))
-                                        .foregroundStyle(viewModel.selectedDate.isSameDay(as: date) ? .white.opacity(0.74) : .black.opacity(0.45))
+                                        .foregroundStyle(isSelected ? .white.opacity(0.78) : .black.opacity(0.45))
 
                                     Text(dayNumber(date))
-                                        .font(.slotWix(18, weight: .bold))
-                                        .foregroundStyle(viewModel.selectedDate.isSameDay(as: date) ? .white : .black)
+                                        .font(.slotWix(19, weight: .bold))
+                                        .foregroundStyle(isSelected ? .white : .black)
                                 }
-                                .frame(width: 64, height: 72)
+                                .frame(width: 66, height: 74)
                                 .background(
                                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .fill(viewModel.selectedDate.isSameDay(as: date) ? Color.black : Color.black.opacity(0.05))
+                                        .fill(isSelected ? accentOrange : softFill)
                                 )
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -258,17 +231,16 @@ struct SlotManagementView: View {
     private var dayOverrideCard: some View {
         LMCard {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Zmiany tylko dla wybranego dnia")
-                    .font(.slotWix(20, weight: .bold))
-                    .foregroundStyle(.black)
+                sectionTitle("Zmiany dla wybranego dnia")
 
                 LMToggleRow(
                     title: "Zamknij cały dzień",
-                    subtitle: "Po włączeniu żaden slot nie będzie dostępny",
+                    subtitle: "Po włączeniu wszystkie sloty dla tego dnia będą niedostępne",
                     isOn: Binding(
                         get: { viewModel.dateOverrideDraft.isClosed },
                         set: { viewModel.dateOverrideDraft.isClosed = $0 }
-                    )
+                    ),
+                    accentColor: .green
                 )
 
                 if !viewModel.dateOverrideDraft.isClosed {
@@ -292,6 +264,7 @@ struct SlotManagementView: View {
 
                     LMInputField(
                         title: "Limit dla całego dnia",
+                        subtitle: "Opcjonalnie. Jeśli puste, zostaną użyte standardowe limity",
                         text: Binding(
                             get: { viewModel.dateOverrideDraft.capacityOverride },
                             set: { viewModel.dateOverrideDraft.capacityOverride = $0 }
@@ -302,6 +275,7 @@ struct SlotManagementView: View {
 
                 LMInputField(
                     title: "Notatka",
+                    subtitle: "Wewnętrzna informacja dla tego dnia",
                     text: Binding(
                         get: { viewModel.dateOverrideDraft.note },
                         set: { viewModel.dateOverrideDraft.note = $0 }
@@ -319,9 +293,10 @@ struct SlotManagementView: View {
                             .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Color.black.opacity(0.05))
+                            .background(softFill)
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
+                    .buttonStyle(.plain)
 
                     Button {
                         Task {
@@ -333,9 +308,10 @@ struct SlotManagementView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Color.black)
+                            .background(accentOrange)
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -345,9 +321,7 @@ struct SlotManagementView: View {
         LMCard {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text("Sloty")
-                        .font(.slotWix(20, weight: .bold))
-                        .foregroundStyle(.black)
+                    sectionTitle("Sloty")
 
                     Spacer()
 
@@ -364,12 +338,12 @@ struct SlotManagementView: View {
                             .font(.slotWix(16, weight: .semiBold))
                             .foregroundStyle(.black)
 
-                        Text("Sprawdź harmonogram dnia lub ustawienia ogólne")
+                        Text("Sprawdź harmonogram dnia albo ustawienia ogólne")
                             .font(.slotWix(14, weight: .regular))
                             .foregroundStyle(mutedText)
                     }
                     .padding(16)
-                    .background(Color.black.opacity(0.04))
+                    .background(softFill)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 } else {
                     VStack(spacing: 10) {
@@ -394,10 +368,10 @@ struct SlotManagementView: View {
                         if slot.hasCapacityOverride {
                             Text("Override")
                                 .font(.slotWix(11, weight: .semiBold))
-                                .foregroundStyle(.black)
+                                .foregroundStyle(accentOrange)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 5)
-                                .background(Color.black.opacity(0.08))
+                                .background(accentOrangeSoft)
                                 .clipShape(Capsule())
                         }
                     }
@@ -410,9 +384,13 @@ struct SlotManagementView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 6) {
-                    Text("Pozostało \(slot.remaining)")
+                    Text("Zajęte \(slot.taken)/\(slot.capacity)")
                         .font(.slotWix(14, weight: .semiBold))
                         .foregroundStyle(.black)
+
+                    Text("Pozostało \(slot.remaining)")
+                        .font(.slotWix(12, weight: .medium))
+                        .foregroundStyle(.black.opacity(0.58))
 
                     Text(slot.statusTitle)
                         .font(.slotWix(12, weight: .semiBold))
@@ -426,17 +404,18 @@ struct SlotManagementView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    capacityText = slot.hasCapacityOverride ? "\(slot.capacity)" : ""
+                    capacityText = slot.capacityOverrideValue.map(String.init) ?? ""
                     capacityEditorSlot = slot
                 } label: {
                     Text("Limit slotu")
                         .font(.slotWix(14, weight: .semiBold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Color.black.opacity(0.05))
+                        .frame(height: 46)
+                        .background(softFill)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
+                .buttonStyle(.plain)
 
                 if slot.isBlocked {
                     Button {
@@ -448,10 +427,11 @@ struct SlotManagementView: View {
                             .font(.slotWix(14, weight: .semiBold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .background(Color.black)
+                            .frame(height: 46)
+                            .background(accentOrange)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
+                    .buttonStyle(.plain)
                 } else {
                     Button {
                         Task {
@@ -462,15 +442,16 @@ struct SlotManagementView: View {
                             .font(.slotWix(14, weight: .semiBold))
                             .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .background(Color.black.opacity(0.05))
+                            .frame(height: 46)
+                            .background(softFill)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
         .padding(16)
-        .background(Color.black.opacity(0.04))
+        .background(softFill)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
@@ -495,15 +476,16 @@ struct SlotManagementView: View {
                 Image(systemName: "minus")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.black)
-                    .frame(width: 36, height: 36)
-                    .background(Color.black.opacity(0.05))
+                    .frame(width: 38, height: 38)
+                    .background(softFill)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
+            .buttonStyle(.plain)
 
             Text("\(value.wrappedValue) \(suffix)")
                 .font(.slotWix(15, weight: .semiBold))
                 .foregroundStyle(.black)
-                .frame(minWidth: 72)
+                .frame(minWidth: 78)
 
             Button {
                 guard let currentIndex = range.firstIndex(of: value.wrappedValue),
@@ -512,24 +494,31 @@ struct SlotManagementView: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.black)
-                    .frame(width: 36, height: 36)
-                    .background(Color.black.opacity(0.05))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(accentOrange)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
+            .buttonStyle(.plain)
         }
         .padding(14)
-        .background(Color.black.opacity(0.04))
+        .background(softFill)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private func statusPill(text: String, color: Color) -> some View {
+    private func sectionTitle(_ text: String) -> some View {
+        Text(text)
+            .font(.slotWix(20, weight: .bold))
+            .foregroundStyle(.black)
+    }
+
+    private func statusPill(text: String, foreground: Color, background: Color) -> some View {
         Text(text)
             .font(.slotWix(13, weight: .semiBold))
-            .foregroundStyle(color)
+            .foregroundStyle(foreground)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(color.opacity(0.10))
+            .background(background)
             .clipShape(Capsule())
     }
 
@@ -550,13 +539,13 @@ struct SlotManagementView: View {
     private func statusForeground(for status: String) -> Color {
         switch status {
         case "available":
-            return .green
+            return accentOrange
         case "blocked":
             return .red
         case "full":
             return .orange
         case "too_late":
-            return Color.black.opacity(0.6)
+            return Color.black.opacity(0.62)
         default:
             return .black
         }
@@ -565,7 +554,7 @@ struct SlotManagementView: View {
     private func statusBackground(for status: String) -> Color {
         switch status {
         case "available":
-            return Color.green.opacity(0.10)
+            return accentOrangeSoft
         case "blocked":
             return Color.red.opacity(0.10)
         case "full":
@@ -581,6 +570,7 @@ struct SlotManagementView: View {
 private struct SlotCapacityEditorSheet: View {
     let slot: AdminDaySlot
     @Binding var capacityText: String
+    let accentOrange: Color
     let onSave: () -> Void
     let onClear: () -> Void
 
@@ -594,7 +584,12 @@ private struct SlotCapacityEditorSheet: View {
                 .font(.slotWix(14, weight: .regular))
                 .foregroundStyle(.black.opacity(0.58))
 
-            LMInputField(title: "Nowy limit", text: $capacityText, keyboard: .numberPad)
+            LMInputField(
+                title: "Nowy limit",
+                subtitle: nil,
+                text: $capacityText,
+                keyboard: .numberPad
+            )
 
             HStack(spacing: 12) {
                 Button(action: onClear) {
@@ -606,6 +601,7 @@ private struct SlotCapacityEditorSheet: View {
                         .background(Color.black.opacity(0.05))
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
+                .buttonStyle(.plain)
 
                 Button(action: onSave) {
                     Text("Zapisz")
@@ -613,9 +609,10 @@ private struct SlotCapacityEditorSheet: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(Color.black)
+                        .background(accentOrange)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
+                .buttonStyle(.plain)
             }
 
             Spacer()
@@ -638,11 +635,13 @@ private struct LMCard<Content: View>: View {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(Color.black.opacity(0.06), lineWidth: 1)
             )
+            .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 2)
     }
 }
 
 private struct LMInputField: View {
     let title: String
+    let subtitle: String?
     @Binding var text: String
     var keyboard: UIKeyboardType = .default
 
@@ -651,6 +650,13 @@ private struct LMInputField: View {
             Text(title)
                 .font(.slotWix(13, weight: .medium))
                 .foregroundStyle(.black.opacity(0.45))
+
+            if let subtitle, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.slotWix(12, weight: .regular))
+                    .foregroundStyle(.black.opacity(0.46))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             TextField(title, text: $text)
                 .font(.slotWix(16, weight: .medium))
@@ -670,6 +676,7 @@ private struct LMToggleRow: View {
     let title: String
     let subtitle: String
     @Binding var isOn: Bool
+    let accentColor: Color
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -688,7 +695,7 @@ private struct LMToggleRow: View {
 
             Toggle("", isOn: $isOn)
                 .labelsHidden()
-                .tint(.black)
+                .tint(accentColor)
         }
         .padding(16)
         .background(Color.black.opacity(0.04))

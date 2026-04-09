@@ -1,6 +1,6 @@
 import Foundation
 
-enum SlotFulfillmentType: String, Codable, CaseIterable, Identifiable {
+enum SlotFulfillmentType: String, Codable, CaseIterable, Identifiable, Sendable {
     case pickup
     case delivery
 
@@ -16,86 +16,43 @@ enum SlotFulfillmentType: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-struct VenueSlotSettings: Codable, Identifiable, Equatable {
-    let id: UUID
+struct VenueSlotSettings: Codable, Equatable, Sendable {
     let profileId: UUID
-    var slotsEnabled: Bool
     var slotDurationMinutes: Int
     var defaultCapacity: Int
     var daysAhead: Int
     var leadTimeMinutes: Int
     var allowAsap: Bool
-    let createdAt: Date?
-    let updatedAt: Date?
+    var earliestPickupTimeText: String?
 
     enum CodingKeys: String, CodingKey {
-        case id
         case profileId = "profile_id"
-        case slotsEnabled = "slots_enabled"
-        case slotDurationMinutes = "slot_duration_minutes"
+        case slotDurationMinutes = "slot_duration"
         case defaultCapacity = "default_capacity"
         case daysAhead = "days_ahead"
-        case leadTimeMinutes = "lead_time_minutes"
+        case leadTimeMinutes = "lead_time_min"
         case allowAsap = "allow_asap"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
+        case earliestPickupTimeText = "earliest_pickup_time_text"
     }
 
     static func placeholder(profileId: UUID) -> VenueSlotSettings {
         .init(
-            id: UUID(),
             profileId: profileId,
-            slotsEnabled: true,
             slotDurationMinutes: 15,
             defaultCapacity: 3,
             daysAhead: 7,
-            leadTimeMinutes: 30,
+            leadTimeMinutes: 0,
             allowAsap: true,
-            createdAt: nil,
-            updatedAt: nil
+            earliestPickupTimeText: nil
         )
     }
 }
 
-struct AvailableSlot: Codable, Identifiable, Hashable {
-    var id: String { slotStartRaw }
+struct AvailableSlot: Codable, Identifiable, Hashable, Sendable {
+    var id: String { slotStart }
 
-    let slotStartRaw: String
-    let slotEndRaw: String
-    let slotLabel: String
-    let capacity: Int
-    let taken: Int
-    let remaining: Int
-    let isAvailable: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case slotStartRaw = "slot_start"
-        case slotEndRaw = "slot_end"
-        case slotLabel = "slot_label"
-        case capacity
-        case taken
-        case remaining
-        case isAvailable = "is_available"
-    }
-
-    var slotStartDate: Date? {
-        ISO8601DateFormatter.supabase.date(from: slotStartRaw)
-    }
-
-    var slotEndDate: Date? {
-        ISO8601DateFormatter.supabase.date(from: slotEndRaw)
-    }
-
-    var subtitle: String {
-        "\(taken) / \(capacity) zamówień"
-    }
-}
-
-struct AdminDaySlot: Codable, Identifiable, Hashable {
-    var id: String { slotStartRaw }
-
-    let slotStartRaw: String
-    let slotEndRaw: String
+    let slotStart: String
+    let slotEnd: String
     let slotLabel: String
     let capacity: Int
     let taken: Int
@@ -106,8 +63,8 @@ struct AdminDaySlot: Codable, Identifiable, Hashable {
     let status: String
 
     enum CodingKeys: String, CodingKey {
-        case slotStartRaw = "slot_start"
-        case slotEndRaw = "slot_end"
+        case slotStart = "slot_start"
+        case slotEnd = "slot_end"
         case slotLabel = "slot_label"
         case capacity
         case taken
@@ -118,16 +75,12 @@ struct AdminDaySlot: Codable, Identifiable, Hashable {
         case status
     }
 
-    var slotStartDate: Date? {
-        ISO8601DateFormatter.supabase.date(from: slotStartRaw)
-    }
-
-    var slotEndDate: Date? {
-        ISO8601DateFormatter.supabase.date(from: slotEndRaw)
+    var slotStartRaw: String {
+        Self.extractHHmm(from: slotStart)
     }
 
     var subtitle: String {
-        "\(taken) / \(capacity) zamówień"
+        "Zajęte \(taken) z \(capacity)"
     }
 
     var statusTitle: String {
@@ -139,19 +92,106 @@ struct AdminDaySlot: Codable, Identifiable, Hashable {
         case "full":
             return "Pełny"
         case "too_late":
-            return "Za późno"
+            return "Za późно"
         default:
             return "Nieznany"
         }
     }
+
+    private static func extractHHmm(from value: String) -> String {
+        let raw = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if raw.count >= 16, raw.contains("T") {
+            let start = raw.index(raw.startIndex, offsetBy: 11)
+            let end = raw.index(start, offsetBy: 5)
+            return String(raw[start..<end])
+        }
+
+        if raw.count >= 5, raw.contains(":") {
+            return String(raw.prefix(5))
+        }
+
+        return raw
+    }
 }
 
-struct SlotOverride: Codable, Identifiable {
+struct AdminDaySlot: Codable, Identifiable, Hashable, Sendable {
+    var id: String { slotStart }
+
+    let slotStart: String
+    let slotEnd: String
+    let slotLabel: String
+    let capacity: Int
+    let taken: Int
+    let remaining: Int
+    let isAvailable: Bool
+    let isBlocked: Bool
+    let hasCapacityOverride: Bool
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case slotStart = "slot_start"
+        case slotEnd = "slot_end"
+        case slotLabel = "slot_label"
+        case capacity
+        case taken
+        case remaining
+        case isAvailable = "is_available"
+        case isBlocked = "is_blocked"
+        case hasCapacityOverride = "has_capacity_override"
+        case status
+    }
+
+    var slotStartRaw: String {
+        Self.extractHHmm(from: slotStart)
+    }
+
+    var subtitle: String {
+        "Zajęte \(taken) z \(capacity)"
+    }
+
+    var capacityOverrideValue: Int? {
+        nil
+    }
+
+    var statusTitle: String {
+        switch status {
+        case "available":
+            return "Dostępny"
+        case "blocked":
+            return "Zablokowany"
+        case "full":
+            return "Pełny"
+        case "too_late":
+            return "Za późно"
+        default:
+            return "Nieznany"
+        }
+    }
+
+    private static func extractHHmm(from value: String) -> String {
+        let raw = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if raw.count >= 16, raw.contains("T") {
+            let start = raw.index(raw.startIndex, offsetBy: 11)
+            let end = raw.index(start, offsetBy: 5)
+            return String(raw[start..<end])
+        }
+
+        if raw.count >= 5, raw.contains(":") {
+            return String(raw.prefix(5))
+        }
+
+        return raw
+    }
+}
+
+struct SlotOverride: Codable, Identifiable, Sendable {
     let id: UUID?
     let profileId: UUID
     let fulfillmentType: SlotFulfillmentType
     let slotStart: String
-    let slotEnd: String
+    let slotEnd: String?
     let isBlocked: Bool
     let capacityOverride: Int?
     let note: String?
@@ -172,7 +212,7 @@ struct SlotOverride: Codable, Identifiable {
     }
 }
 
-struct SlotDateOverride: Codable, Identifiable {
+struct SlotDateOverride: Codable, Identifiable, Sendable {
     let id: UUID?
     let profileId: UUID
     let overrideDate: String
@@ -200,7 +240,33 @@ struct SlotDateOverride: Codable, Identifiable {
     }
 }
 
-struct SlotDateOverrideDraft {
+struct SlotTimeOverride: Codable, Identifiable, Sendable {
+    let id: UUID?
+    let profileId: UUID
+    let overrideDate: String
+    let fulfillmentType: SlotFulfillmentType
+    let slotTime: String
+    let isBlocked: Bool
+    let capacityOverride: Int?
+    let note: String?
+    let createdAt: Date?
+    let updatedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case profileId = "profile_id"
+        case overrideDate = "override_date"
+        case fulfillmentType = "fulfillment_type"
+        case slotTime = "slot_time"
+        case isBlocked = "is_blocked"
+        case capacityOverride = "capacity_override"
+        case note
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct SlotDateOverrideDraft: Sendable {
     var isClosed: Bool = false
     var openDate: Date = Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: .now) ?? .now
     var closeDate: Date = Calendar.current.date(bySettingHour: 22, minute: 0, second: 0, of: .now) ?? .now

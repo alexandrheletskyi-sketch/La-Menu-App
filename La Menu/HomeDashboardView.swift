@@ -6,13 +6,14 @@ struct HomeDashboardView: View {
     @Environment(\.openURL) private var openURL
     @State private var viewModel = HomeDashboardViewModel()
 
-    private let pageBackground = Color(red: 0.965, green: 0.965, blue: 0.965)
+    private let pageBackground = Color.white
     private let cardBackground = Color.white
-    private let softFill = Color.black.opacity(0.04)
-    private let softBorder = Color.black.opacity(0.08)
+    private let softFill = Color.black.opacity(0.035)
+    private let softBorder = Color.black.opacity(0.075)
     private let mutedText = Color.black.opacity(0.58)
-    private let accentOrange = Color(red: 1.000, green: 0.557, blue: 0.176)
-    private let accentGreen = Color(red: 0.110, green: 0.620, blue: 0.290)
+    private let secondaryText = Color.black.opacity(0.42)
+    private let accentOrange = Color(red: 1.0, green: 95.0 / 255.0, blue: 43.0 / 255.0)
+    private let accentGreen = Color(red: 99.0 / 255.0, green: 225.0 / 255.0, blue: 141.0 / 255.0)
 
     var body: some View {
         NavigationStack {
@@ -25,6 +26,7 @@ struct HomeDashboardView: View {
                         if viewModel.isLoading {
                             ProgressView("Ładowanie...")
                                 .font(.custom("WixMadeforDisplay-Regular", size: 16))
+                                .tint(.black)
                                 .padding(.top, 80)
 
                         } else if let profile = viewModel.profile {
@@ -40,6 +42,7 @@ struct HomeDashboardView: View {
                         }
                     }
                 }
+                .background(Color.white)
             }
             .toolbar(.hidden, for: .navigationBar)
             .task {
@@ -56,7 +59,9 @@ struct HomeDashboardView: View {
     private func dashboardContent(profile: Profile) -> some View {
         VStack(alignment: .leading, spacing: 24) {
             headerSection(profile: profile)
-            actionButtonsSection(profile: profile)
+            scheduleHeroCard(profile: profile)
+            utilityRow(profile: profile)
+            primaryActionsSection(profile: profile)
 
             VStack(alignment: .leading, spacing: 14) {
                 sectionHeader("Dzisiaj")
@@ -83,150 +88,153 @@ struct HomeDashboardView: View {
             return value.isEmpty ? "Adres nie został dodany" : value
         }()
 
-        let menuLink = "lamenu.pl/\(profile.username)"
+        return VStack(alignment: .leading, spacing: 14) {
+            Text(profile.businessName)
+                .font(.custom("WixMadeforDisplay-Bold", size: 42))
+                .foregroundStyle(.black)
+                .lineLimit(2)
+                .minimumScaleFactor(0.78)
 
-        return VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .center, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(profile.businessName)
-                        .font(.custom("WixMadeforDisplay-Bold", size: 39))
-                        .foregroundStyle(.black)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.78)
+            HStack(alignment: .center, spacing: 10) {
+                Text(addressText)
+                    .font(.custom("WixMadeforDisplay-Regular", size: 17))
+                    .foregroundStyle(mutedText)
+                    .lineLimit(1)
 
-                    Text(addressText)
-                        .font(.custom("WixMadeforDisplay-Regular", size: 16))
-                        .foregroundStyle(mutedText)
-                        .lineLimit(2)
+                Circle()
+                    .fill(profile.isAcceptingOrders ? accentGreen : Color.black.opacity(0.18))
+                    .frame(width: 7, height: 7)
 
-                    statusBadge(isOn: profile.isAcceptingOrders)
-                        .padding(.top, 2)
-                }
-
-                Spacer(minLength: 12)
-
-                businessLogoView(profile: profile)
+                Text(profile.isAcceptingOrders ? "Otwarte na zamówienia" : "Zamówienia wstrzymane")
+                    .font(.custom("WixMadeforDisplay-Medium", size: 14))
+                    .foregroundStyle(.black.opacity(0.74))
+                    .lineLimit(1)
             }
-
-            openLinkRow(menuLink: menuLink)
         }
     }
 
-    private func openLinkRow(menuLink: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Publiczny link")
-                .font(.custom("WixMadeforDisplay-Medium", size: 13))
-                .foregroundStyle(mutedText)
+    private func scheduleHeroCard(profile: Profile) -> some View {
+        NavigationLink {
+            SlotManagementView(profileId: profile.id)
+        } label: {
+            HStack(spacing: 14) {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.black.opacity(0.045))
+                    .frame(width: 54, height: 54)
+                    .overlay(
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.black)
+                    )
 
-            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Zarządzaj rozkładem")
+                        .font(.custom("WixMadeforDisplay-Bold", size: 22))
+                        .foregroundStyle(.black)
+
+                    Text("Godziny, sloty i limity zamówień")
+                        .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                        .foregroundStyle(mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.black.opacity(0.04))
+                    .frame(width: 42, height: 42)
+                    .overlay(
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.black)
+                    )
+            }
+            .padding(18)
+            .background(cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(softBorder, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func utilityRow(profile: Profile) -> some View {
+        let menuLink = "lamenu.pl/\(profile.username)"
+        let menuURL = URL(string: "https://\(menuLink)")!
+
+        return HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Publiczny link")
+                    .font(.custom("WixMadeforDisplay-Medium", size: 12))
+                    .foregroundStyle(secondaryText)
+
                 Text(menuLink)
-                    .font(.custom("WixMadeforDisplay-SemiBold", size: 20))
+                    .font(.custom("WixMadeforDisplay-SemiBold", size: 17))
                     .foregroundStyle(.black)
                     .lineLimit(1)
                     .truncationMode(.middle)
-
-                Spacer(minLength: 0)
-
-                Button {
-                    UIPasteboard.general.string = "https://\(menuLink)"
-                } label: {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(softFill)
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Image(systemName: "doc.on.doc")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(.black)
-                        )
-                }
-                .buttonStyle(.plain)
             }
 
-            Rectangle()
-                .fill(Color.black.opacity(0.08))
-                .frame(height: 1)
-                .padding(.top, 2)
-        }
-    }
+            Spacer(minLength: 0)
 
-    @ViewBuilder
-    private func businessLogoView(profile: Profile) -> some View {
-        let logo = profile.logoURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-        if let url = URL(string: logo), !logo.isEmpty {
-            AsyncImage(url: url) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
-            } placeholder: {
-                logoPlaceholder
+            Button {
+                UIPasteboard.general.string = menuURL.absoluteString
+            } label: {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.black.opacity(0.04))
+                    .frame(width: 46, height: 46)
+                    .overlay(
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.black)
+                    )
             }
-            .frame(width: 112, height: 112)
-            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-        } else {
-            logoPlaceholder
+            .buttonStyle(.plain)
         }
+        .padding(.horizontal, 2)
     }
 
-    private var logoPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 30, style: .continuous)
-            .fill(cardBackground)
-            .frame(width: 112, height: 112)
-            .overlay(
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .stroke(softBorder, lineWidth: 1)
-            )
-            .overlay(
-                Image(systemName: "fork.knife")
-                    .font(.system(size: 36, weight: .semibold))
-                    .foregroundStyle(.black)
-            )
-    }
-
-    private func statusBadge(isOn: Bool) -> some View {
-        Text(isOn ? "Przyjmujesz zamówienia" : "Zamówienia wstrzymane")
-            .font(.custom("WixMadeforDisplay-Medium", size: 12))
-            .foregroundStyle(
-                isOn ? accentGreen : Color.black.opacity(0.68)
-            )
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                isOn
-                ? accentGreen.opacity(0.12)
-                : Color.black.opacity(0.06)
-            )
-            .clipShape(Capsule())
-    }
-
-    private func actionButtonsSection(profile: Profile) -> some View {
+    private func primaryActionsSection(profile: Profile) -> some View {
         let menuURL = URL(string: "https://lamenu.pl/\(profile.username)")!
 
         return HStack(spacing: 12) {
             ShareLink(item: menuURL) {
-                Label("Udostępnij", systemImage: "square.and.arrow.up")
-                    .font(.custom("WixMadeforDisplay-SemiBold", size: 17))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(softBorder, lineWidth: 1)
-                    )
+                HStack(spacing: 10) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 17, weight: .semibold))
+
+                    Text("Udostępnij")
+                        .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 58)
+                .background(cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(softBorder, lineWidth: 1)
+                )
             }
 
             Button {
                 openURL(menuURL)
             } label: {
-                Label("Otwórz menu", systemImage: "arrow.up.right")
-                    .font(.custom("WixMadeforDisplay-SemiBold", size: 17))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Color.black)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 17, weight: .semibold))
+
+                    Text("Otwórz menu")
+                        .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 58)
+                .background(accentOrange)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             }
             .buttonStyle(.plain)
         }
@@ -242,26 +250,24 @@ struct HomeDashboardView: View {
         HStack(spacing: 12) {
             statCard(
                 title: "Zamówienia",
-                subtitle: "DZISIAJ",
                 value: "\(viewModel.ordersTodayCount)",
                 icon: "cart"
             )
 
             statCard(
                 title: "Przychód",
-                subtitle: "DZISIAJ",
                 value: "\(Int(viewModel.revenueToday)) zł",
                 icon: "banknote"
             )
         }
     }
 
-    private func statCard(title: String, subtitle: String, value: String, icon: String) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private func statCard(title: String, value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
             HStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(softFill)
-                    .frame(width: 40, height: 40)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.black.opacity(0.035))
+                    .frame(width: 44, height: 44)
                     .overlay(
                         Image(systemName: icon)
                             .font(.system(size: 17, weight: .semibold))
@@ -270,38 +276,40 @@ struct HomeDashboardView: View {
 
                 Spacer()
 
-                Text(subtitle)
+                Text("DZISIAJ")
                     .font(.custom("WixMadeforDisplay-Medium", size: 11))
-                    .foregroundStyle(mutedText)
+                    .foregroundStyle(secondaryText)
             }
 
-            Text(title)
-                .font(.custom("WixMadeforDisplay-Regular", size: 16))
-                .foregroundStyle(mutedText)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.custom("WixMadeforDisplay-Regular", size: 16))
+                    .foregroundStyle(mutedText)
 
-            Text(value)
-                .font(.custom("WixMadeforDisplay-Bold", size: 34))
-                .foregroundStyle(.black)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                Text(value)
+                    .font(.custom("WixMadeforDisplay-Bold", size: 35))
+                    .foregroundStyle(.black)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .uberCardStyle()
+        .premiumCardStyle()
     }
 
     private func ordersToggleSection(profile: Profile) -> some View {
         HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(softFill)
-                .frame(width: 46, height: 46)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.04))
+                .frame(width: 48, height: 48)
                 .overlay(
-                    Image(systemName: "bolt.horizontal")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.black)
+                    Image(systemName: profile.isAcceptingOrders ? "bolt.horizontal.fill" : "pause.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(profile.isAcceptingOrders ? accentOrange : .black.opacity(0.65))
                 )
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("Przyjmowanie zamówień")
                     .font(.custom("WixMadeforDisplay-SemiBold", size: 19))
                     .foregroundStyle(.black)
@@ -311,12 +319,12 @@ struct HomeDashboardView: View {
                     ? "Klienci mogą teraz składać nowe zamówienia"
                     : "Nowe zamówienia są chwilowo wyłączone"
                 )
-                .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                .font(.custom("WixMadeforDisplay-Regular", size: 13))
                 .foregroundStyle(mutedText)
                 .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer(minLength: 12)
+            Spacer(minLength: 8)
 
             Toggle(
                 "",
@@ -330,10 +338,10 @@ struct HomeDashboardView: View {
                 )
             )
             .labelsHidden()
-            .tint(Color.black)
+            .tint(accentOrange)
         }
         .padding(18)
-        .uberCardStyle()
+        .premiumCardStyle()
     }
 
     private var recentOrdersSection: some View {
@@ -350,7 +358,7 @@ struct HomeDashboardView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(20)
-                .uberCardStyle()
+                .premiumCardStyle()
 
             } else {
                 ForEach(viewModel.recentOrders) { order in
@@ -358,27 +366,27 @@ struct HomeDashboardView: View {
                         HStack(alignment: .top, spacing: 12) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Nowe zamówienie")
-                                    .font(.custom("WixMadeforDisplay-Bold", size: 24))
+                                    .font(.custom("WixMadeforDisplay-Bold", size: 22))
                                     .foregroundStyle(.black)
 
                                 Text(order.fulfillmentType == "pickup" ? "Odbiór osobisty" : "Dostawa")
-                                    .font(.custom("WixMadeforDisplay-Regular", size: 15))
+                                    .font(.custom("WixMadeforDisplay-Regular", size: 14))
                                     .foregroundStyle(mutedText)
                             }
 
                             Spacer()
 
                             Text("\(Int(order.totalAmount)) zł")
-                                .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
-                                .foregroundStyle(accentGreen)
+                                .font(.custom("WixMadeforDisplay-SemiBold", size: 14))
+                                .foregroundStyle(accentOrange)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
-                                .background(accentGreen.opacity(0.12))
+                                .background(accentOrange.opacity(0.12))
                                 .clipShape(Capsule())
                         }
 
                         Rectangle()
-                            .fill(Color.black.opacity(0.07))
+                            .fill(Color.black.opacity(0.06))
                             .frame(height: 1)
 
                         VStack(spacing: 14) {
@@ -413,7 +421,7 @@ struct HomeDashboardView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(20)
-                    .uberCardStyle()
+                    .premiumCardStyle()
                 }
             }
         }
@@ -422,7 +430,7 @@ struct HomeDashboardView: View {
     private func orderDetailRow(icon: String, title: String, value: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(softFill)
+                .fill(Color.black.opacity(0.04))
                 .frame(width: 36, height: 36)
                 .overlay(
                     Image(systemName: icon)
@@ -433,10 +441,10 @@ struct HomeDashboardView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.custom("WixMadeforDisplay-Medium", size: 13))
-                    .foregroundStyle(mutedText)
+                    .foregroundStyle(secondaryText)
 
                 Text(value)
-                    .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
+                    .font(.custom("WixMadeforDisplay-SemiBold", size: 17))
                     .foregroundStyle(.black)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -458,30 +466,30 @@ struct HomeDashboardView: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 58)
-            .background(Color.black)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(accentOrange)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         .buttonStyle(.plain)
         .padding(.top, 2)
     }
 }
 
-private struct UberCardModifier: ViewModifier {
+private struct PremiumCardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.black.opacity(0.07), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 2)
     }
 }
 
 private extension View {
-    func uberCardStyle() -> some View {
-        modifier(UberCardModifier())
+    func premiumCardStyle() -> some View {
+        modifier(PremiumCardModifier())
     }
 }
 

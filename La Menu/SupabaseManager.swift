@@ -34,4 +34,14 @@ enum SupabaseManager {
             .getPublicURL(path: path)
             .absoluteString
     }
+
+    static func fetchSMSUsageOverview(profileId: UUID) async throws -> SMSUsageOverview {
+        try await shared
+            .from("subscription_plan_overview")
+            .select("sms_limit, sms_remaining, sms_used_this_period")
+            .eq("profile_id", value: profileId.uuidString)
+            .single()
+            .execute()
+            .value
+    }
 }

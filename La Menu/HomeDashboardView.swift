@@ -4,11 +4,13 @@ import UIKit
 struct HomeDashboardView: View {
     @Environment(AuthViewModel.self) private var auth
     @Environment(\.openURL) private var openURL
+
     @State private var viewModel = HomeDashboardViewModel()
+    @State private var showCopyToast = false
+    @State private var showPlansView = false
 
     private let pageBackground = Color.white
     private let cardBackground = Color.white
-    private let softFill = Color.black.opacity(0.035)
     private let softBorder = Color.black.opacity(0.075)
     private let mutedText = Color.black.opacity(0.58)
     private let secondaryText = Color.black.opacity(0.42)
@@ -17,7 +19,7 @@ struct HomeDashboardView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .bottom) {
                 pageBackground
                     .ignoresSafeArea()
 
@@ -43,8 +45,25 @@ struct HomeDashboardView: View {
                     }
                 }
                 .background(Color.white)
+
+                if showCopyToast {
+                    copyToast
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, 110)
+                }
             }
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showCopyToast)
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showPlansView) {
+                if let profile = viewModel.profile {
+                    NavigationStack {
+                        PlansView(
+                            currentPlan: profile.subscriptionPlan,
+                            currentSmsCredits: profile.currentSmsCredits ?? 0
+                        )
+                    }
+                }
+            }
             .task {
                 guard let userId = auth.currentUserId else { return }
                 await viewModel.load(for: userId)
@@ -68,7 +87,7 @@ struct HomeDashboardView: View {
                 statsSection
             }
 
-            ordersToggleSection(profile: profile)
+            ordersSettingsSection(profile: profile)
 
             VStack(alignment: .leading, spacing: 14) {
                 sectionHeader("Ostatnie zamówienia")
@@ -102,14 +121,41 @@ struct HomeDashboardView: View {
                     .lineLimit(1)
 
                 Circle()
-                    .fill(profile.isAcceptingOrders ? accentGreen : Color.black.opacity(0.18))
+                    .fill(viewModel.isEffectivelyAcceptingOrders ? accentGreen : Color.black.opacity(0.18))
                     .frame(width: 7, height: 7)
 
-                Text(profile.isAcceptingOrders ? "Otwarte na zamówienia" : "Zamówienia wstrzymane")
+                Text(viewModel.effectiveOrdersStatusTitle)
                     .font(.custom("WixMadeforDisplay-Medium", size: 14))
                     .foregroundStyle(.black.opacity(0.74))
                     .lineLimit(1)
             }
+
+            Button {
+                showPlansView = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(accentOrange)
+
+                    Text("Plan \(profile.subscriptionPlan.title)")
+                        .font(.custom("WixMadeforDisplay-SemiBold", size: 14))
+                        .foregroundStyle(.black)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.black.opacity(0.45))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(Color.black.opacity(0.045))
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -182,6 +228,7 @@ struct HomeDashboardView: View {
 
             Button {
                 UIPasteboard.general.string = menuURL.absoluteString
+                showCopiedFeedback()
             } label: {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color.black.opacity(0.04))
@@ -298,36 +345,15 @@ struct HomeDashboardView: View {
         .premiumCardStyle()
     }
 
-    private func ordersToggleSection(profile: Profile) -> some View {
-        HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.04))
-                .frame(width: 48, height: 48)
-                .overlay(
-                    Image(systemName: profile.isAcceptingOrders ? "bolt.horizontal.fill" : "pause.fill")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(profile.isAcceptingOrders ? accentOrange : .black.opacity(0.65))
-                )
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Przyjmowanie zamówień")
-                    .font(.custom("WixMadeforDisplay-SemiBold", size: 19))
-                    .foregroundStyle(.black)
-
-                Text(
-                    profile.isAcceptingOrders
-                    ? "Klienci mogą teraz składać nowe zamówienia"
-                    : "Nowe zamówienia są chwilowo wyłączone"
-                )
-                .font(.custom("WixMadeforDisplay-Regular", size: 13))
-                .foregroundStyle(mutedText)
-                .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 8)
-
-            Toggle(
-                "",
+    private func ordersSettingsSection(profile: Profile) -> some View {
+        VStack(spacing: 12) {
+            settingToggleCard(
+                title: "Przyjmowanie zamówień",
+                subtitle: profile.isAcceptingOrders
+                    ? "Klienci mogą składać zamówienia, jeśli lokal jest w godzinach pracy"
+                    : "Nowe zamówienia są ręcznie wyłączone",
+                systemImage: profile.isAcceptingOrders ? "bolt.horizontal.fill" : "pause.fill",
+                iconColor: profile.isAcceptingOrders ? accentOrange : .black.opacity(0.65),
                 isOn: Binding(
                     get: { profile.isAcceptingOrders },
                     set: { _ in
@@ -337,8 +363,59 @@ struct HomeDashboardView: View {
                     }
                 )
             )
-            .labelsHidden()
-            .tint(accentOrange)
+
+            settingToggleCard(
+                title: "Przedłuż przyjmowanie zamówień",
+                subtitle: profile.continueAfterHours
+                    ? "Lokal może przyjmować zamówienia także po godzinach pracy"
+                    : "Po zamknięciu lokalu przyjmowanie zamówień zostanie zatrzymane",
+                systemImage: profile.continueAfterHours ? "moon.stars.fill" : "moon.fill",
+                iconColor: profile.continueAfterHours ? accentOrange : .black.opacity(0.65),
+                isOn: Binding(
+                    get: { profile.continueAfterHours },
+                    set: { _ in
+                        Task {
+                            await viewModel.toggleContinueAfterHours()
+                        }
+                    }
+                )
+            )
+        }
+    }
+
+    private func settingToggleCard(
+        title: String,
+        subtitle: String,
+        systemImage: String,
+        iconColor: Color,
+        isOn: Binding<Bool>
+    ) -> some View {
+        HStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.04))
+                .frame(width: 48, height: 48)
+                .overlay(
+                    Image(systemName: systemImage)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(iconColor)
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.custom("WixMadeforDisplay-SemiBold", size: 19))
+                    .foregroundStyle(.black)
+
+                Text(subtitle)
+                    .font(.custom("WixMadeforDisplay-Regular", size: 13))
+                    .foregroundStyle(mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .tint(accentOrange)
         }
         .padding(18)
         .premiumCardStyle()
@@ -472,6 +549,39 @@ struct HomeDashboardView: View {
         .buttonStyle(.plain)
         .padding(.top, 2)
     }
+
+    private var copyToast: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(accentGreen)
+
+            Text("Link skopiowany")
+                .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
+                .foregroundStyle(.black)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.white)
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(Color.black.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 6)
+    }
+
+    private func showCopiedFeedback() {
+        withAnimation {
+            showCopyToast = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            withAnimation {
+                showCopyToast = false
+            }
+        }
+    }
 }
 
 private struct PremiumCardModifier: ViewModifier {
@@ -495,4 +605,5 @@ private extension View {
 
 #Preview {
     HomeDashboardView()
+        .environment(AuthViewModel())
 }

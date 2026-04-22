@@ -5,6 +5,9 @@ import UIKit
 struct OnboardingView: View {
     @Environment(AuthViewModel.self) private var auth
 
+    @State private var logoPhoto: PhotosPickerItem?
+    @State private var logoImageData: Data?
+
     @State private var firstItemPhoto: PhotosPickerItem?
     @State private var firstItemImageData: Data?
     @State private var isSubmittingFinish = false
@@ -36,6 +39,7 @@ struct OnboardingView: View {
             get: { auth.onboardingDraft.username },
             set: { newValue in
                 auth.updateUsernameDraft(newValue)
+                log("username changed -> \(newValue)")
             }
         )
     }
@@ -53,10 +57,12 @@ struct OnboardingView: View {
                         VStack(alignment: .leading, spacing: 18) {
                             currentStepView
                         }
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
                         .padding(.horizontal, 20)
                         .padding(.top, 8)
                         .padding(.bottom, 132)
                     }
+                    .id(step)
                     .background(Color.white)
                 }
 
@@ -66,14 +72,47 @@ struct OnboardingView: View {
             .navigationBarBackButtonHidden(true)
         }
         .background(Color.white)
+        .task(id: logoPhoto) {
+            guard let logoPhoto else { return }
+            log("loading logo photo")
+            logoImageData = try? await logoPhoto.loadTransferable(type: Data.self)
+            log("logo photo loaded -> \(logoImageData != nil)")
+        }
         .task(id: firstItemPhoto) {
             guard let firstItemPhoto else { return }
+            log("loading first item photo")
             firstItemImageData = try? await firstItemPhoto.loadTransferable(type: Data.self)
+            log("first item photo loaded -> \(firstItemImageData != nil)")
         }
         .onAppear {
+            log("onAppear")
+            logDraftState(prefix: "initial draft")
+
+            if logoImageData == nil {
+                logoImageData = draft.logoImageData
+                log("restored logoImageData from draft -> \(logoImageData != nil)")
+            }
+
             if firstItemImageData == nil {
                 firstItemImageData = draft.firstItemImageData
+                log("restored firstItemImageData from draft -> \(firstItemImageData != nil)")
             }
+        }
+        .onChange(of: step) { _, newStep in
+            log("step changed -> \(newStep.rawValue) \(newStep.title)")
+        }
+        .onChange(of: auth.errorMessage) { _, newValue in
+            if let newValue, !newValue.isEmpty {
+                log("auth.errorMessage -> \(newValue)")
+            }
+        }
+        .onChange(of: auth.noticeMessage) { _, newValue in
+            if let newValue, !newValue.isEmpty {
+                log("auth.noticeMessage -> \(newValue)")
+            }
+        }
+        .onChange(of: auth.isLoading) { _, newValue in
+            log("auth.isLoading -> \(newValue)")
         }
     }
 
@@ -161,7 +200,9 @@ struct OnboardingView: View {
             BasicInfoStepView(
                 businessName: binding(\.businessName),
                 address: binding(\.address),
-                phone: binding(\.phone)
+                phone: binding(\.phone),
+                logoPhoto: $logoPhoto,
+                logoImageData: $logoImageData
             )
 
         case .publicLink:
@@ -171,7 +212,9 @@ struct OnboardingView: View {
                 validationState: auth.usernameValidationState,
                 isBusy: auth.isLoading,
                 onCheckNow: {
+                    log("manual username check requested")
                     await auth.validateUsernameAvailability(force: true)
+                    log("username validation state after check -> \(String(describing: auth.usernameValidationState))")
                 }
             )
 
@@ -233,7 +276,10 @@ struct OnboardingView: View {
             )
 
         case .finish:
-            FinishStepView(draft: draft)
+            FinishStepView(
+                draft: draft,
+                logoImageData: logoImageData
+            )
         }
     }
 
@@ -258,6 +304,7 @@ struct OnboardingView: View {
             HStack(spacing: 12) {
                 if step.rawValue > 0 {
                     Button {
+                        log("back tapped from step \(step.rawValue)")
                         withAnimation(.easeInOut(duration: 0.22)) {
                             step = OnboardingStep(rawValue: step.rawValue - 1) ?? .basicInfo
                         }
@@ -279,16 +326,24 @@ struct OnboardingView: View {
                 }
 
                 Button {
-                    guard !isSubmittingFinish else { return }
+                    guard !isSubmittingFinish else {
+                        log("primary button ignored because isSubmittingFinish == true")
+                        return
+                    }
+
+                    log("primary button tapped at step \(step.rawValue) \(step.title)")
+                    log("isCurrentStepValid -> \(isCurrentStepValid)")
 
                     Task {
                         if step == .finish {
                             isSubmittingFinish = true
+                            log("finish submission started")
                         }
 
                         await nextAction()
 
                         isSubmittingFinish = false
+                        log("finish submission ended")
                     }
                 } label: {
                     HStack(spacing: 8) {
@@ -388,7 +443,10 @@ struct OnboardingView: View {
     }
 
     private func nextAction() async {
+        log("nextAction started for step \(step.rawValue) \(step.title)")
+
         if auth.isLoading {
+            log("nextAction aborted because auth.isLoading == true")
             return
         }
 
@@ -405,26 +463,57 @@ struct OnboardingView: View {
                 updatedDraft.contactPhone = updatedDraft.phone
             }
 
+            updatedDraft.logoImageData = logoImageData
             draft = updatedDraft
+
+            log("basicInfo step saved into draft")
+            logDraftState(prefix: "after basicInfo")
         }
 
         if step == .publicLink {
+            log("checking publicLink before continue")
             let canContinue = await auth.ensureUsernameValidForNextStep()
-            guard canContinue else { return }
+            log("ensureUsernameValidForNextStep -> \(canContinue)")
+            log("username validation state -> \(String(describing: auth.usernameValidationState))")
+            guard canContinue else {
+                log("nextAction stopped on publicLink")
+                return
+            }
         }
 
         if step == .firstMenu {
             var updatedDraft = draft
             updatedDraft.firstItemImageData = firstItemImageData
             draft = updatedDraft
+
+            log("firstMenu image saved into draft -> \(firstItemImageData != nil)")
+            logDraftState(prefix: "after firstMenu")
         }
 
         if step == .finish {
-            auth.onboardingDraft = draft
+            var updatedDraft = draft
+            updatedDraft.logoImageData = logoImageData
+            updatedDraft.firstItemImageData = firstItemImageData
+            auth.onboardingDraft = updatedDraft
+
+            log("about to completeOnboarding")
+            logDraftState(prefix: "before completeOnboarding")
+
             await auth.completeOnboarding()
+
+            log("completeOnboarding finished")
+            log("auth.errorMessage after complete -> \(auth.errorMessage ?? "nil")")
+            log("auth.noticeMessage after complete -> \(auth.noticeMessage ?? "nil")")
+            log("auth.isLoading after complete -> \(auth.isLoading)")
+            log("auth.profile exists after complete -> \(auth.profile != nil)")
+            log("auth.profile id after complete -> \(auth.profile?.id.uuidString ?? "nil")")
+            log("auth.onboardingStep after complete -> \(auth.onboardingStep.rawValue) \(auth.onboardingStep.title)")
         } else {
+            let nextStep = OnboardingStep(rawValue: step.rawValue + 1) ?? .finish
+            log("moving to next step -> \(nextStep.rawValue) \(nextStep.title)")
+
             withAnimation(.easeInOut(duration: 0.22)) {
-                step = OnboardingStep(rawValue: step.rawValue + 1) ?? .finish
+                step = nextStep
             }
         }
     }
@@ -432,20 +521,59 @@ struct OnboardingView: View {
     private func binding<Value>(_ keyPath: WritableKeyPath<OnboardingDraft, Value>) -> Binding<Value> {
         Binding(
             get: { auth.onboardingDraft[keyPath: keyPath] },
-            set: { auth.onboardingDraft[keyPath: keyPath] = $0 }
+            set: { newValue in
+                auth.onboardingDraft[keyPath: keyPath] = newValue
+            }
         )
+    }
+
+    private func log(_ message: String) {
+        print("🟠 [OnboardingView] \(message)")
+    }
+
+    private func logDraftState(prefix: String) {
+        print("""
+        🟠 [OnboardingView] \(prefix)
+           step: \(step.rawValue) \(step.title)
+           businessName: \(draft.businessName)
+           username: \(draft.username)
+           accentColorHex: \(draft.accentColorHex)
+           legalBusinessName: \(draft.legalBusinessName)
+           businessDisplayName: \(draft.businessDisplayName)
+           nip: \(draft.nip)
+           addressLine1: \(draft.addressLine1)
+           postalCode: \(draft.postalCode)
+           city: \(draft.city)
+           contactEmail: \(draft.contactEmail)
+           contactPhone: \(draft.contactPhone)
+           pickupAvailable: \(draft.pickupAvailable)
+           deliveryAvailable: \(draft.deliveryAvailable)
+           cashPaymentAvailable: \(draft.cashPaymentAvailable)
+           cardPaymentAvailable: \(draft.cardPaymentAvailable)
+           blikPaymentAvailable: \(draft.blikPaymentAvailable)
+           isAcceptingOrders: \(draft.isAcceptingOrders)
+           smsConfirmationEnabled: \(draft.smsConfirmationEnabled)
+           slotIntervalMinutes: \(draft.slotIntervalMinutes)
+           categoryName: \(draft.categoryName)
+           firstItemName: \(draft.firstItemName)
+           firstItemPrice: \(draft.firstItemPrice)
+           hasLogoImageData: \(logoImageData != nil)
+           hasFirstItemImageData: \(firstItemImageData != nil)
+        """)
     }
 }
 
-private struct BasicInfoStepView: View {
+struct BasicInfoStepView: View {
     @Binding var businessName: String
     @Binding var address: String
     @Binding var phone: String
+    @Binding var logoPhoto: PhotosPickerItem?
+    @Binding var logoImageData: Data?
 
     private let accentSoft = Color(lmHex: "#5BE47B").opacity(0.14)
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
                 title: "Profil lokalu",
                 subtitle: "Dodaj podstawowe dane widoczne na stronie lokalu i w panelu"
@@ -466,7 +594,7 @@ private struct BasicInfoStepView: View {
                             .font(.wix(17, wixWeight: .semiBold))
                             .foregroundStyle(.black)
 
-                        Text("Nazwa, adres i numer telefonu będą widoczne dla klientów")
+                        Text("Nazwa, adres, telefon i logo będą widoczne dla klientów")
                             .font(.wix(13, wixWeight: .regular))
                             .foregroundStyle(.black.opacity(0.58))
                             .fixedSize(horizontal: false, vertical: true)
@@ -480,6 +608,69 @@ private struct BasicInfoStepView: View {
             }
 
             LMCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Logo lokalu")
+                        .font(.wix(18, wixWeight: .semiBold))
+                        .foregroundStyle(.black)
+
+                    PhotosPicker(selection: $logoPhoto, matching: .images) {
+                        HStack(spacing: 16) {
+                            Group {
+                                if let logoImageData,
+                                   let uiImage = UIImage(data: logoImageData) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                } else {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                            .fill(Color.black.opacity(0.06))
+
+                                        VStack(spacing: 8) {
+                                            Image(systemName: "photo.fill")
+                                                .font(.system(size: 22, weight: .semibold))
+                                                .foregroundStyle(.black)
+
+                                            Text("Dodaj logo")
+                                                .font(.wix(13, wixWeight: .semiBold))
+                                                .foregroundStyle(.black)
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(width: 92, height: 92)
+                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Zdjęcie logo")
+                                    .font(.wix(17, wixWeight: .semiBold))
+                                    .foregroundStyle(.black)
+
+                                Text("Pokaże się na stronie lokalu i w panelu")
+                                    .font(.wix(14, wixWeight: .regular))
+                                    .foregroundStyle(.black.opacity(0.58))
+
+                                Text("Opcjonalne")
+                                    .font(.wix(12, wixWeight: .semiBold))
+                                    .foregroundStyle(.black.opacity(0.42))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.black.opacity(0.05))
+                                    .clipShape(Capsule())
+                            }
+
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(Color.black.opacity(0.04))
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            LMCard {
                 VStack(spacing: 14) {
                     LMInputField(title: "Nazwa lokalu", text: $businessName)
                     LMInputField(title: "Adres", text: $address)
@@ -487,10 +678,11 @@ private struct BasicInfoStepView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
-private struct PublicLinkStepView: View {
+struct PublicLinkStepView: View {
     @Binding var username: String
     let accentSoft: Color
     let validationState: AuthViewModel.UsernameValidationState
@@ -523,27 +715,27 @@ private struct PublicLinkStepView: View {
     private var helperColor: Color {
         switch validationState {
         case .available:
-            return Color.green
+            return .green
         case .taken, .invalid, .error:
-            return Color.red
+            return .red
         default:
-            return Color.black.opacity(0.48)
+            return .black.opacity(0.48)
         }
     }
 
     private var borderColor: Color {
         switch validationState {
         case .available:
-            return Color.green.opacity(0.25)
+            return .green.opacity(0.25)
         case .taken, .invalid, .error:
-            return Color.red.opacity(0.25)
+            return .red.opacity(0.25)
         default:
-            return Color.clear
+            return .clear
         }
     }
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
                 title: "Wybierz swój link",
                 subtitle: "To będzie adres, który udostępnisz klientom w social media i wiadomościach"
@@ -604,26 +796,30 @@ private struct PublicLinkStepView: View {
                 subtitle: "Prosty link łatwiej zapamiętać i lepiej wygląda w internecie"
             )
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .task(id: username) {
+            guard !isBusy else { return }
+
             let normalized = username.slugified
             guard !normalized.isEmpty else { return }
             guard normalized.count >= 3 else { return }
 
             try? await Task.sleep(nanoseconds: 450_000_000)
             guard !Task.isCancelled else { return }
+            guard !isBusy else { return }
 
             await onCheckNow()
         }
     }
 }
 
-private struct BrandColorStepView: View {
+struct BrandColorStepView: View {
     @Binding var accentColorHex: String
 
     private let presets: [String] = [
+        "#FFAA00",
         "#FF0043",
         "#FE592A",
-        "#5BE47B",
         "#111111",
         "#3B82F6",
         "#8B5CF6"
@@ -633,13 +829,13 @@ private struct BrandColorStepView: View {
         Binding(
             get: { Color(lmHex: accentColorHex) },
             set: { newValue in
-                accentColorHex = newValue.toHexString() ?? "#FF0043"
+                accentColorHex = newValue.toHexString() ?? "#FFAA00"
             }
         )
     }
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
                 title: "Wybierz kolor firmowy",
                 subtitle: "Ten kolor będzie używany w przyciskach, akcentach i elementach marki"
@@ -669,8 +865,8 @@ private struct BrandColorStepView: View {
                                         Circle()
                                             .stroke(
                                                 accentColorHex.lowercased() == hex.lowercased()
-                                                ? Color.black
-                                                : Color.clear,
+                                                ? .black
+                                                : .clear,
                                                 lineWidth: 2
                                             )
                                     )
@@ -708,10 +904,11 @@ private struct BrandColorStepView: View {
                 subtitle: "Możesz go później zmienić w panelu ustawień profilu"
             )
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
-private struct LegalDetailsStepView: View {
+struct LegalDetailsStepView: View {
     @Binding var legalBusinessName: String
     @Binding var businessDisplayName: String
     @Binding var nip: String
@@ -726,7 +923,7 @@ private struct LegalDetailsStepView: View {
     @Binding var complaintPhone: String
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
                 title: "Dane do dokumentów",
                 subtitle: "Te informacje pojawią się w danych sprzedawcy, regulaminie zamówień i polityce prywatności lokalu"
@@ -761,10 +958,11 @@ private struct LegalDetailsStepView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
-private struct FulfillmentStepView: View {
+struct FulfillmentStepView: View {
     @Binding var pickupAvailable: Bool
     @Binding var deliveryAvailable: Bool
     @Binding var deliveryArea: String
@@ -775,7 +973,7 @@ private struct FulfillmentStepView: View {
     let accentColor: Color
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
                 title: "Realizacja i płatność",
                 subtitle: "Ustaw dostępne formy odbioru, dostawę i metody płatności"
@@ -848,15 +1046,16 @@ private struct FulfillmentStepView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
-private struct OpeningHoursStepView: View {
+struct OpeningHoursStepView: View {
     @Binding var days: [DayHoursDraft]
     let accentColor: Color
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: 14) {
             LMHeroCard(
                 title: "Godziny otwarcia",
                 subtitle: "Klienci od razu zobaczą, kiedy lokal przyjmuje zamówienia"
@@ -901,10 +1100,11 @@ private struct OpeningHoursStepView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
-private struct OrderSettingsStepView: View {
+struct OrderSettingsStepView: View {
     @Binding var isAcceptingOrders: Bool
     @Binding var smsConfirmationEnabled: Bool
     @Binding var slotIntervalMinutes: Int
@@ -913,7 +1113,7 @@ private struct OrderSettingsStepView: View {
     private let slotOptions = [5, 10, 15, 20, 30, 45, 60]
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
                 title: "Przyjmowanie zamówień",
                 subtitle: "Włącz lub wyłącz zamówienia, ustaw odstęp między slotami i wybierz, czy klient ma dostać SMS po złożeniu zamówienia"
@@ -988,10 +1188,11 @@ private struct OrderSettingsStepView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
-private struct FirstMenuStepView: View {
+struct FirstMenuStepView: View {
     @Binding var categoryName: String
     @Binding var firstItemName: String
     @Binding var firstItemDescription: String
@@ -1000,7 +1201,7 @@ private struct FirstMenuStepView: View {
     @Binding var firstItemImageData: Data?
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
                 title: "Pierwsza kategoria i pierwsza pozycja",
                 subtitle: "Najpierw utwórz kategorię, a potem dodaj do niej pierwszą pozycję ze zdjęciem"
@@ -1077,6 +1278,7 @@ private struct FirstMenuStepView: View {
                         .background(Color.black.opacity(0.04))
                         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
+                    .buttonStyle(.plain)
 
                     LMInputField(title: "Nazwa pozycji", text: $firstItemName)
                     LMInputField(title: "Opis pozycji", text: $firstItemDescription)
@@ -1090,19 +1292,38 @@ private struct FirstMenuStepView: View {
                 subtitle: "Po zakończeniu dodasz kolejne kategorie, więcej pozycji i więcej zdjęć"
             )
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
-private struct FinishStepView: View {
+struct FinishStepView: View {
     let draft: OnboardingDraft
+    let logoImageData: Data?
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: 16) {
             LMHeroCard(
                 title: "Wszystko gotowe",
                 subtitle: "Sprawdź najważniejsze dane przed utworzeniem panelu"
             ) {
                 EmptyView()
+            }
+
+            if let logoImageData,
+               let uiImage = UIImage(data: logoImageData) {
+                LMCard {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Logo")
+                            .font(.wix(20, wixWeight: .bold))
+                            .foregroundStyle(.black)
+
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 96, height: 96)
+                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    }
+                }
             }
 
             summaryCard(
@@ -1160,7 +1381,7 @@ private struct FinishStepView: View {
                     ("Sloty", "\(draft.slotIntervalMinutes) min")
                 ]
             )
-            
+
             summaryCard(
                 title: "Pierwsza kategoria i pozycja",
                 rows: [
@@ -1170,6 +1391,7 @@ private struct FinishStepView: View {
                 ]
             )
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private var legalAddressSummary: String {
@@ -1205,7 +1427,7 @@ private struct FinishStepView: View {
     }
 }
 
-private struct LMHeroCard<Content: View>: View {
+struct LMHeroCard<Content: View>: View {
     let title: String
     let subtitle: String
     @ViewBuilder let content: Content
@@ -1237,7 +1459,7 @@ private struct LMHeroCard<Content: View>: View {
     }
 }
 
-private struct LMCard<Content: View>: View {
+struct LMCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -1253,7 +1475,7 @@ private struct LMCard<Content: View>: View {
     }
 }
 
-private struct LMInfoCard: View {
+struct LMInfoCard: View {
     let icon: String
     let title: String
     let subtitle: String
@@ -1293,7 +1515,7 @@ private struct LMInfoCard: View {
     }
 }
 
-private struct LMInputField: View {
+struct LMInputField: View {
     let title: String
     @Binding var text: String
     var keyboard: UIKeyboardType = .default
@@ -1318,7 +1540,7 @@ private struct LMInputField: View {
     }
 }
 
-private struct LMToggleRow: View {
+struct LMToggleRow: View {
     let title: String
     let subtitle: String
     @Binding var isOn: Bool
@@ -1349,7 +1571,7 @@ private struct LMToggleRow: View {
     }
 }
 
-private struct LMTimePickerCard: View {
+struct LMTimePickerCard: View {
     let title: String
     @Binding var date: Date
 
@@ -1376,13 +1598,13 @@ private struct LMTimePickerCard: View {
     }
 }
 
-private extension Font {
+extension Font {
     static func wix(_ size: CGFloat, wixWeight: WixWeight = .regular) -> Font {
         .custom(wixWeight.fontName, size: size)
     }
 }
 
-private enum WixWeight {
+enum WixWeight {
     case regular
     case medium
     case semiBold
@@ -1405,7 +1627,7 @@ private enum WixWeight {
     }
 }
 
-private extension String {
+extension String {
     var trimmed: String {
         trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -1419,13 +1641,17 @@ private extension String {
     }
 }
 
-private extension Color {
+extension Color {
     init(lmHex: String) {
         let hex = lmHex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
 
-        let a, r, g, b: UInt64
+        let a: UInt64
+        let r: UInt64
+        let g: UInt64
+        let b: UInt64
+
         switch hex.count {
         case 3:
             (a, r, g, b) = (

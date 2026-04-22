@@ -6,14 +6,13 @@ struct MenusView: View {
 
     @State private var showAddCategorySheet = false
     @State private var selectedCategoryForNewItem: MenuCategory?
+    @State private var editingItem: MenuItem?
+    @State private var showPlansView = false
 
     private let pageBackground = Color(red: 0.965, green: 0.965, blue: 0.965)
-    private let cardBackground = Color.white
     private let softFill = Color.black.opacity(0.04)
-    private let softBorder = Color.black.opacity(0.08)
     private let mutedText = Color.black.opacity(0.58)
-    private let accentOrange = Color(red: 1.000, green: 0.557, blue: 0.176)
-    private let accentGreen = Color(red: 99/255, green: 225/255, blue: 141/255)
+    private let accentGreen = Color(red: 99 / 255, green: 225 / 255, blue: 141 / 255)
     private let accentGreenText = Color(red: 0.22, green: 0.58, blue: 0.34)
     private let accentBlue = Color(red: 0.86, green: 0.93, blue: 1.00)
     private let accentBlueText = Color(red: 0.12, green: 0.52, blue: 0.96)
@@ -25,8 +24,8 @@ struct MenusView: View {
                     .ignoresSafeArea()
 
                 Group {
-                    if let profileID = auth.profile?.id {
-                        content(profileID: profileID)
+                    if let profile = auth.profile {
+                        content(profile: profile)
                     } else {
                         ContentUnavailableView(
                             "Brak profilu",
@@ -46,33 +45,79 @@ struct MenusView: View {
                 .presentationDetents([.medium])
             }
             .sheet(item: $selectedCategoryForNewItem) { category in
-                AddMenuItemSheet(category: category) { draft in
-                    Task {
-                        await viewModel.addItem(
-                            categoryID: category.id,
-                            name: draft.name,
-                            description: draft.description,
-                            price: draft.price,
-                            oldPrice: draft.oldPrice,
-                            weight: draft.weight,
-                            allergens: draft.allergens,
-                            tags: draft.tags,
-                            isRecommended: draft.isRecommended,
-                            isSpicy: draft.isSpicy,
-                            isVegetarian: draft.isVegetarian,
-                            imageData: draft.imageData
+                if let profile = auth.profile {
+                    AddMenuItemSheet(
+                        profile: profile,
+                        currentItemsCount: totalItemsCount,
+                        category: category,
+                        mode: .add
+                    ) { draft in
+                        Task {
+                            await viewModel.addItem(
+                                categoryID: category.id,
+                                name: draft.name,
+                                description: draft.description,
+                                price: draft.price,
+                                weight: draft.weight,
+                                allergensText: draft.allergensText,
+                                imageData: draft.imageData
+                            )
+                        }
+                    }
+                    .presentationDetents([.large])
+                } else {
+                    ContentUnavailableView(
+                        "Brak profilu",
+                        systemImage: "person.crop.circle.badge.exclamationmark",
+                        description: Text("Nie udało się odczytać planu użytkownika")
+                    )
+                }
+            }
+            .sheet(item: $editingItem) { item in
+                if let profile = auth.profile,
+                   let category = viewModel.categories.first(where: { $0.id == item.categoryID }) {
+                    AddMenuItemSheet(
+                        profile: profile,
+                        currentItemsCount: totalItemsCount,
+                        category: category,
+                        mode: .edit(item)
+                    ) { draft in
+                        Task {
+                            await viewModel.updateItem(item, with: draft)
+                        }
+                    }
+                    .presentationDetents([.large])
+                } else {
+                    ContentUnavailableView(
+                        "Brak danych",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text("Nie udało się otworzyć edycji pozycji")
+                    )
+                }
+            }
+            .sheet(isPresented: $showPlansView) {
+                if let profile = auth.profile {
+                    NavigationStack {
+                        PlansView(
+                            currentPlan: profile.subscriptionPlan,
+                            currentSmsCredits: profile.currentSmsCredits ?? 0
                         )
                     }
+                } else {
+                    ContentUnavailableView(
+                        "Brak profilu",
+                        systemImage: "person.crop.circle.badge.exclamationmark",
+                        description: Text("Nie udało się odczytać planu użytkownika")
+                    )
                 }
-                .presentationDetents([.large])
             }
         }
     }
 
-    private func content(profileID: UUID) -> some View {
+    private func content(profile: Profile) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 24) {
-                headerSection
+                headerSection(profile: profile)
 
                 if let errorMessage = viewModel.errorMessage, !errorMessage.isEmpty {
                     errorCard(errorMessage)
@@ -90,15 +135,15 @@ struct MenusView: View {
             .padding(.top, 14)
             .padding(.bottom, 120)
         }
-        .task(id: profileID) {
-            await viewModel.load(profileID: profileID)
+        .task(id: profile.id) {
+            await viewModel.load(profileID: profile.id)
         }
         .refreshable {
-            await viewModel.load(profileID: profileID)
+            await viewModel.load(profileID: profile.id)
         }
     }
 
-    private var headerSection: some View {
+    private func headerSection(profile: Profile) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Menu")
                 .font(.custom("WixMadeforDisplay-Bold", size: 44))
@@ -111,34 +156,43 @@ struct MenusView: View {
                 .frame(maxWidth: 330, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 10) {
-                summaryPill(
-                    title: "Kategorie",
-                    value: viewModel.categories.count,
-                    foreground: accentBlueText,
-                    background: accentBlue
-                )
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    summaryPill(
+                        title: "Kategorie",
+                        value: "\(viewModel.categories.count)",
+                        foreground: accentBlueText,
+                        background: accentBlue
+                    )
 
-                summaryPill(
-                    title: "Pozycje",
-                    value: totalItemsCount,
-                    foreground: accentGreenText,
-                    background: accentGreen.opacity(0.18)
-                )
+                    summaryPill(
+                        title: "Pozycje",
+                        value: "\(totalItemsCount)",
+                        foreground: accentGreenText,
+                        background: accentGreen.opacity(0.18)
+                    )
 
-                if viewModel.isLoading {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .scaleEffect(0.8)
+                    summaryPill(
+                        title: "Plan",
+                        value: profile.subscriptionPlan.title,
+                        foreground: .black,
+                        background: Color.black.opacity(0.06)
+                    )
 
-                        Text("Ładowanie")
-                            .font(.custom("WixMadeforDisplay-Medium", size: 13))
+                    if viewModel.isLoading {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .scaleEffect(0.8)
+
+                            Text("Ładowanie")
+                                .font(.custom("WixMadeforDisplay-Medium", size: 13))
+                        }
+                        .foregroundStyle(mutedText)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(Color.black.opacity(0.05))
+                        .clipShape(Capsule())
                     }
-                    .foregroundStyle(mutedText)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.05))
-                    .clipShape(Capsule())
                 }
             }
 
@@ -162,12 +216,12 @@ struct MenusView: View {
         }
     }
 
-    private func summaryPill(title: String, value: Int, foreground: Color, background: Color) -> some View {
+    private func summaryPill(title: String, value: String, foreground: Color, background: Color) -> some View {
         HStack(spacing: 8) {
             Text(title)
                 .font(.custom("WixMadeforDisplay-Medium", size: 13))
 
-            Text("\(value)")
+            Text(value)
                 .font(.custom("WixMadeforDisplay-SemiBold", size: 13))
         }
         .foregroundStyle(foreground)
@@ -295,7 +349,7 @@ struct MenusView: View {
 
                     SwiftUI.Menu {
                         Button {
-                            selectedCategoryForNewItem = category
+                            handleAddItemTapped(for: category)
                         } label: {
                             Label("Dodaj pozycję", systemImage: "plus")
                         }
@@ -336,7 +390,7 @@ struct MenusView: View {
                         .foregroundStyle(mutedText)
 
                     Button {
-                        selectedCategoryForNewItem = category
+                        handleAddItemTapped(for: category)
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "plus")
@@ -367,16 +421,19 @@ struct MenusView: View {
                             mutedText: mutedText,
                             accentGreen: accentGreen,
                             accentGreenText: accentGreenText,
-                            accentOrange: accentOrange
-                        ) {
-                            Task {
-                                await viewModel.deleteItem(item)
+                            onEdit: {
+                                editingItem = item
+                            },
+                            onDelete: {
+                                Task {
+                                    await viewModel.deleteItem(item)
+                                }
                             }
-                        }
+                        )
                     }
 
                     Button {
-                        selectedCategoryForNewItem = category
+                        handleAddItemTapped(for: category)
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "plus")
@@ -405,8 +462,24 @@ struct MenusView: View {
     }
 
     private var totalItemsCount: Int {
-        viewModel.categories.reduce(0) { partial, category in
-            partial + viewModel.items(for: category.id).count
+        viewModel.items.count
+    }
+
+    private func canAddMoreItems(profile: Profile) -> Bool {
+        guard let limit = profile.subscriptionPlan.menuItemLimit else {
+            return true
+        }
+
+        return totalItemsCount < limit
+    }
+
+    private func handleAddItemTapped(for category: MenuCategory) {
+        guard let profile = auth.profile else { return }
+
+        if canAddMoreItems(profile: profile) {
+            selectedCategoryForNewItem = category
+        } else {
+            showPlansView = true
         }
     }
 }
@@ -417,7 +490,7 @@ private struct MenuItemCard: View {
     let mutedText: Color
     let accentGreen: Color
     let accentGreenText: Color
-    let accentOrange: Color
+    let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -442,6 +515,12 @@ private struct MenuItemCard: View {
                             .font(.custom("WixMadeforDisplay-Medium", size: 13))
                             .foregroundStyle(mutedText)
                     }
+
+                    if let allergens = item.allergens, !allergens.isEmpty {
+                        Text("Alergeny: \(allergens.joined(separator: ", "))")
+                            .font(.custom("WixMadeforDisplay-Medium", size: 12))
+                            .foregroundStyle(mutedText)
+                    }
                 }
 
                 Spacer(minLength: 8)
@@ -455,14 +534,19 @@ private struct MenuItemCard: View {
                         .background(accentGreen.opacity(0.18))
                         .clipShape(Capsule())
 
-                    if let oldPrice = item.oldPrice {
-                        Text("\(Int(oldPrice)) zł")
+                    if !item.isAvailable {
+                        Text("Niedostępne")
                             .font(.custom("WixMadeforDisplay-Medium", size: 12))
-                            .foregroundStyle(mutedText)
-                            .strikethrough()
+                            .foregroundStyle(.red)
                     }
 
                     SwiftUI.Menu {
+                        Button {
+                            onEdit()
+                        } label: {
+                            Label("Edytuj pozycję", systemImage: "pencil")
+                        }
+
                         Button(role: .destructive) {
                             onDelete()
                         } label: {
@@ -481,46 +565,6 @@ private struct MenuItemCard: View {
                     .buttonStyle(.plain)
                 }
             }
-
-            if hasTags {
-                FlexibleTagWrap(spacing: 8, lineSpacing: 8) {
-                    if item.isRecommended {
-                        tagPill(
-                            title: "Polecane",
-                            foreground: accentGreenText,
-                            background: accentGreen.opacity(0.18),
-                            icon: "star.fill"
-                        )
-                    }
-
-                    if item.isSpicy {
-                        tagPill(
-                            title: "Pikantne",
-                            foreground: accentOrange,
-                            background: accentOrange.opacity(0.14),
-                            icon: "flame.fill"
-                        )
-                    }
-
-                    if item.isVegetarian {
-                        tagPill(
-                            title: "Wege",
-                            foreground: .green,
-                            background: Color.green.opacity(0.14),
-                            icon: "leaf.fill"
-                        )
-                    }
-
-                    if !item.isAvailable {
-                        tagPill(
-                            title: "Niedostępne",
-                            foreground: .red,
-                            background: Color.red.opacity(0.12),
-                            icon: "xmark.circle.fill"
-                        )
-                    }
-                }
-            }
         }
         .padding(16)
         .background(Color.white)
@@ -529,25 +573,6 @@ private struct MenuItemCard: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.black.opacity(0.06), lineWidth: 1)
         )
-    }
-
-    private var hasTags: Bool {
-        item.isRecommended || item.isSpicy || item.isVegetarian || !item.isAvailable
-    }
-
-    private func tagPill(title: String, foreground: Color, background: Color, icon: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .semibold))
-
-            Text(title)
-                .font(.custom("WixMadeforDisplay-Medium", size: 12))
-        }
-        .foregroundStyle(foreground)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(background)
-        .clipShape(Capsule())
     }
 
     @ViewBuilder
@@ -593,16 +618,6 @@ private struct MenuItemCard: View {
                 .font(.system(size: 24, weight: .semibold))
                 .foregroundStyle(.black.opacity(0.7))
         }
-    }
-}
-
-private struct FlexibleTagWrap<Content: View>: View {
-    let spacing: CGFloat
-    let lineSpacing: CGFloat
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        content
     }
 }
 

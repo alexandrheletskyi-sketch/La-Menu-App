@@ -124,6 +124,18 @@ private struct VenueLegalDetailsPayload: Encodable {
     let privacy_version: String
 }
 
+private struct MenuIdRecord: Decodable {
+    let id: UUID
+}
+
+private struct MenuCategoryIdRecord: Decodable {
+    let id: UUID
+}
+
+private struct OrderIdRecord: Decodable {
+    let id: UUID
+}
+
 @MainActor
 @Observable
 final class AuthViewModel {
@@ -144,8 +156,8 @@ final class AuthViewModel {
 
     enum UsernameValidationState: Equatable {
         case idle
-        case typing
         case checking
+        case typing
         case available
         case taken
         case invalid(String)
@@ -168,19 +180,47 @@ final class AuthViewModel {
         "polityka-cookies"
     ]
 
+    private func log(_ message: String) {
+        print("🟠 [AuthViewModel] \(message)")
+    }
+
+    private func logError(_ prefix: String, error: Error) {
+        print("🔴 [AuthViewModel] \(prefix): \(error.localizedDescription)")
+    }
+
+    private func logState(_ prefix: String) {
+        print("""
+🟣 [AuthViewModel] \(prefix)
+   isAuthenticated: \(isAuthenticated)
+   isLoading: \(isLoading)
+   needsOnboarding: \(needsOnboarding)
+   currentUserId: \(currentUserId?.uuidString ?? "nil")
+   profileId: \(profile?.id.uuidString ?? "nil")
+   onboardingStep: \(onboardingStep.rawValue)
+   errorMessage: \(errorMessage ?? "nil")
+   noticeMessage: \(noticeMessage ?? "nil")
+""")
+    }
+
     func checkSession() async {
+        log("checkSession started")
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
 
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            logState("checkSession finished")
+        }
 
         do {
             let session = try await SupabaseManager.shared.auth.session
             currentUserId = session.user.id
             isAuthenticated = true
+            log("checkSession session user id -> \(session.user.id.uuidString)")
             await loadProfileStatus()
         } catch {
+            logError("checkSession failed", error: error)
             isAuthenticated = false
             needsOnboarding = false
             currentUserId = nil
@@ -190,8 +230,10 @@ final class AuthViewModel {
     }
 
     func signIn(email: String, password: String) async {
+        log("signIn started email -> \(email.trimmed)")
         guard !email.trimmed.isEmpty, !password.isEmpty else {
             errorMessage = "Wpisz e-mail i hasło."
+            log("signIn validation failed")
             return
         }
 
@@ -199,7 +241,10 @@ final class AuthViewModel {
         errorMessage = nil
         noticeMessage = nil
 
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            logState("signIn finished")
+        }
 
         do {
             let result = try await SupabaseManager.shared.auth.signIn(
@@ -209,8 +254,10 @@ final class AuthViewModel {
 
             currentUserId = result.user.id
             isAuthenticated = true
+            log("signIn success user id -> \(result.user.id.uuidString)")
             await loadProfileStatus()
         } catch {
+            logError("signIn failed", error: error)
             errorMessage = "Nie udało się zalogować. Sprawdź dane i spróbuj ponownie."
             isAuthenticated = false
             needsOnboarding = false
@@ -218,8 +265,10 @@ final class AuthViewModel {
     }
 
     func signUp(email: String, password: String) async {
+        log("signUp started email -> \(email.trimmed)")
         guard !email.trimmed.isEmpty, !password.isEmpty else {
             errorMessage = "Wpisz e-mail i hasło."
+            log("signUp validation failed")
             return
         }
 
@@ -227,7 +276,10 @@ final class AuthViewModel {
         errorMessage = nil
         noticeMessage = nil
 
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            logState("signUp finished")
+        }
 
         do {
             let result = try await SupabaseManager.shared.auth.signUp(
@@ -238,8 +290,10 @@ final class AuthViewModel {
             currentUserId = result.user.id
             isAuthenticated = true
             needsOnboarding = true
+            log("signUp success user id -> \(result.user.id.uuidString)")
             resetOnboardingState()
         } catch {
+            logError("signUp failed", error: error)
             errorMessage = "Nie udało się utworzyć konta. Spróbuj ponownie."
             isAuthenticated = false
             needsOnboarding = false
@@ -253,11 +307,15 @@ final class AuthViewModel {
         familyName: String?,
         email: String?
     ) async {
+        log("signInWithApple started")
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
 
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            logState("signInWithApple finished")
+        }
 
         do {
             let result = try await SupabaseManager.shared.auth.signInWithIdToken(
@@ -270,6 +328,7 @@ final class AuthViewModel {
 
             currentUserId = result.user.id
             isAuthenticated = true
+            log("signInWithApple success user id -> \(result.user.id.uuidString)")
 
             let fullName = [givenName, familyName]
                 .compactMap { value in
@@ -288,6 +347,7 @@ final class AuthViewModel {
             )
 
             if !metadataToSave.isEmpty {
+                log("signInWithApple updating metadata")
                 try? await SupabaseManager.shared.auth.update(
                     user: UserAttributes(data: metadataToSave)
                 )
@@ -295,6 +355,7 @@ final class AuthViewModel {
 
             await loadProfileStatus()
         } catch {
+            logError("signInWithApple failed", error: error)
             errorMessage = "Nie udało się zalogować przez Apple."
             isAuthenticated = false
             needsOnboarding = false
@@ -330,10 +391,13 @@ final class AuthViewModel {
 
     func loadProfileStatus() async {
         guard let currentUserId else {
+            log("loadProfileStatus aborted because currentUserId is nil")
             needsOnboarding = false
             profile = nil
             return
         }
+
+        log("loadProfileStatus started for user -> \(currentUserId.uuidString)")
 
         do {
             let profiles: [Profile] = try await SupabaseManager.shared
@@ -344,23 +408,37 @@ final class AuthViewModel {
                 .execute()
                 .value
 
+            log("loadProfileStatus fetched profiles count -> \(profiles.count)")
+
             if let existingProfile = profiles.first {
                 profile = existingProfile
                 needsOnboarding = !existingProfile.onboardingCompleted
                 OneSignal.login(existingProfile.id.uuidString)
 
+                log("""
+loadProfileStatus found profile
+profile.id -> \(existingProfile.id.uuidString)
+profile.username -> \(existingProfile.username)
+profile.onboardingCompleted -> \(existingProfile.onboardingCompleted)
+needsOnboarding -> \(needsOnboarding)
+""")
+
                 if needsOnboarding {
                     await preloadOnboardingDraftIfNeeded(for: existingProfile)
                 }
             } else {
+                log("loadProfileStatus no profile found -> needsOnboarding = true")
                 profile = nil
                 needsOnboarding = true
                 resetOnboardingState()
             }
         } catch {
+            logError("loadProfileStatus failed", error: error)
             profile = nil
             needsOnboarding = true
         }
+
+        logState("loadProfileStatus finished")
     }
 
     func updateUsernameDraft(_ rawValue: String) {
@@ -369,6 +447,8 @@ final class AuthViewModel {
 
         errorMessage = nil
         lastCheckedUsername = ""
+
+        log("updateUsernameDraft -> \(normalized)")
 
         if normalized.isEmpty {
             usernameValidationState = .idle
@@ -392,25 +472,31 @@ final class AuthViewModel {
         let username = onboardingDraft.username.slugified
         onboardingDraft.username = username
 
+        log("validateUsernameAvailability started username -> \(username), force -> \(force)")
+
         guard !username.isEmpty else {
             usernameValidationState = .idle
             lastCheckedUsername = ""
+            log("validateUsernameAvailability empty username")
             return
         }
 
         guard username.count >= 3 else {
             usernameValidationState = .invalid("Link musi mieć co najmniej 3 znaki.")
             lastCheckedUsername = ""
+            log("validateUsernameAvailability username too short")
             return
         }
 
         guard !reservedUsernames.contains(username) else {
             usernameValidationState = .taken
             lastCheckedUsername = ""
+            log("validateUsernameAvailability reserved username")
             return
         }
 
         if !force, lastCheckedUsername == username, usernameValidationState == .available {
+            log("validateUsernameAvailability skipped because cached as available")
             return
         }
 
@@ -423,7 +509,9 @@ final class AuthViewModel {
 
             lastCheckedUsername = username
             usernameValidationState = isAvailable ? .available : .taken
+            log("validateUsernameAvailability result -> \(isAvailable)")
         } catch {
+            logError("validateUsernameAvailability failed", error: error)
             usernameValidationState = .error("Nie udało się sprawdzić linku.")
         }
     }
@@ -432,22 +520,28 @@ final class AuthViewModel {
         let username = onboardingDraft.username.slugified
         onboardingDraft.username = username
 
+        log("ensureUsernameValidForNextStep started username -> \(username)")
         await validateUsernameAvailability(force: true)
 
         switch usernameValidationState {
         case .available:
+            log("ensureUsernameValidForNextStep -> available")
             return true
         case .taken:
             errorMessage = "Ten link jest już zajęty. Wybierz inny."
+            log("ensureUsernameValidForNextStep -> taken")
             return false
         case .invalid(let message):
             errorMessage = message
+            log("ensureUsernameValidForNextStep -> invalid: \(message)")
             return false
         case .error(let message):
             errorMessage = message
+            log("ensureUsernameValidForNextStep -> error: \(message)")
             return false
         default:
             errorMessage = "Sprawdź link publiczny jeszcze raz."
+            log("ensureUsernameValidForNextStep -> default failure")
             return false
         }
     }
@@ -456,13 +550,21 @@ final class AuthViewModel {
         noticeMessage = nil
 
         let nip = onboardingDraft.nip.trimmed
-        guard !nip.isEmpty else { return }
+        guard !nip.isEmpty else {
+            log("refreshNIPWarning skipped because nip empty")
+            return
+        }
+
+        log("refreshNIPWarning started nip -> \(nip)")
 
         do {
             let existingOwnedProfileId = try await fetchExistingOwnedProfileId()
             let existing = try await findExistingNIPUsage(nip: nip, excludingProfileId: existingOwnedProfileId)
 
-            guard let found = existing.first else { return }
+            guard let found = existing.first else {
+                log("refreshNIPWarning no existing NIP usage")
+                return
+            }
 
             let displayName =
                 found.business_display_name?.trimmed.nilIfEmpty ??
@@ -470,7 +572,9 @@ final class AuthViewModel {
                 "innym lokalu"
 
             noticeMessage = "Ten NIP jest już używany w lokalu „\(displayName)”. Możesz mimo to kontynuować."
+            log("refreshNIPWarning found existing NIP usage in -> \(displayName)")
         } catch {
+            logError("refreshNIPWarning failed", error: error)
         }
     }
 
@@ -479,17 +583,57 @@ final class AuthViewModel {
     }
 
     func completeOnboarding(draft: OnboardingDraft) async {
-        guard let currentUserId else { return }
-        guard !isLoading else { return }
+        guard let currentUserId else {
+            log("completeOnboarding aborted because currentUserId is nil")
+            return
+        }
+
+        guard !isLoading else {
+            log("completeOnboarding aborted because isLoading = true")
+            return
+        }
+
+        log("""
+completeOnboarding started
+currentUserId -> \(currentUserId.uuidString)
+draft.businessName -> \(draft.businessName)
+draft.username -> \(draft.username)
+draft.accentColorHex -> \(draft.accentColorHex)
+draft.legalBusinessName -> \(draft.legalBusinessName)
+draft.businessDisplayName -> \(draft.businessDisplayName)
+draft.nip -> \(draft.nip)
+draft.addressLine1 -> \(draft.addressLine1)
+draft.postalCode -> \(draft.postalCode)
+draft.city -> \(draft.city)
+draft.contactEmail -> \(draft.contactEmail)
+draft.contactPhone -> \(draft.contactPhone)
+draft.pickupAvailable -> \(draft.pickupAvailable)
+draft.deliveryAvailable -> \(draft.deliveryAvailable)
+draft.cashPaymentAvailable -> \(draft.cashPaymentAvailable)
+draft.cardPaymentAvailable -> \(draft.cardPaymentAvailable)
+draft.blikPaymentAvailable -> \(draft.blikPaymentAvailable)
+draft.isAcceptingOrders -> \(draft.isAcceptingOrders)
+draft.smsConfirmationEnabled -> \(draft.smsConfirmationEnabled)
+draft.slotIntervalMinutes -> \(draft.slotIntervalMinutes)
+draft.categoryName -> \(draft.categoryName)
+draft.firstItemName -> \(draft.firstItemName)
+draft.firstItemPrice -> \(draft.firstItemPrice)
+hasLogoImageData -> \(draft.logoImageData != nil)
+hasFirstItemImageData -> \(draft.firstItemImageData != nil)
+""")
 
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
 
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            logState("completeOnboarding finished")
+        }
 
         do {
             try validateDraftForCompletion(draft)
+            log("completeOnboarding validation passed")
 
             let username = draft.username.slugified
             let businessName = draft.businessName.trimmed
@@ -498,7 +642,10 @@ final class AuthViewModel {
             )
 
             let existingOwnedProfileId = try await fetchExistingOwnedProfileId()
+            log("completeOnboarding existingOwnedProfileId -> \(existingOwnedProfileId?.uuidString ?? "nil")")
+
             let isAvailable = try await isUsernameAvailable(username, excludingProfileId: existingOwnedProfileId)
+            log("completeOnboarding username available -> \(isAvailable)")
 
             guard isAvailable else {
                 throw Self.makeFriendlyError("Ten link jest już zajęty. Wybierz inny.")
@@ -509,6 +656,8 @@ final class AuthViewModel {
                 excludingProfileId: existingOwnedProfileId
             )
 
+            log("completeOnboarding existing NIP rows count -> \(existingNIPRows.count)")
+
             if let found = existingNIPRows.first {
                 let displayName =
                     found.business_display_name?.trimmed.nilIfEmpty ??
@@ -516,21 +665,26 @@ final class AuthViewModel {
                     "innym lokalu"
 
                 noticeMessage = "Ten NIP jest już używany w lokalu „\(displayName)”. Możesz mimo to kontynuować."
+                log("completeOnboarding found duplicated NIP in -> \(displayName)")
             }
 
-            let profileIdForPath = existingOwnedProfileId?.uuidString ?? currentUserId.uuidString
+            let storageOwnerId = currentUserId.uuidString.lowercased()
+            log("completeOnboarding storageOwnerId -> \(storageOwnerId)")
 
             let uploadedLogoURL = try await uploadImageIfNeeded(
                 data: draft.logoImageData,
                 bucket: "logo",
-                path: "profiles/\(profileIdForPath)/logo-\(UUID().uuidString).jpg"
+                path: "\(storageOwnerId)/logo-\(UUID().uuidString.lowercased()).jpg"
             )
 
             let uploadedFirstItemImageURL = try await uploadImageIfNeeded(
                 data: draft.firstItemImageData,
                 bucket: "menu-items",
-                path: "profiles/\(profileIdForPath)/items/first-item-\(UUID().uuidString).jpg"
+                path: "\(storageOwnerId)/first-item-\(UUID().uuidString.lowercased()).jpg"
             )
+
+            log("completeOnboarding uploadedLogoURL -> \(uploadedLogoURL ?? "nil")")
+            log("completeOnboarding uploadedFirstItemImageURL -> \(uploadedFirstItemImageURL ?? "nil")")
 
             let existingProfiles: [Profile] = try await SupabaseManager.shared
                 .from("profiles")
@@ -540,9 +694,13 @@ final class AuthViewModel {
                 .execute()
                 .value
 
+            log("completeOnboarding existing profiles count -> \(existingProfiles.count)")
+
             let savedProfile: Profile
 
             if let existingProfile = existingProfiles.first {
+                log("completeOnboarding updating existing profile -> \(existingProfile.id.uuidString)")
+
                 let updatePayload = UpdateProfilePayload(
                     business_name: businessName,
                     username: username,
@@ -570,12 +728,23 @@ final class AuthViewModel {
                     .execute()
                     .value
 
+                log("""
+completeOnboarding updated profile
+savedProfile.id -> \(savedProfile.id.uuidString)
+savedProfile.username -> \(savedProfile.username)
+savedProfile.onboardingCompleted -> \(savedProfile.onboardingCompleted)
+""")
+
                 try await SupabaseManager.shared
                     .from("business_hours")
                     .delete()
                     .eq("profile_id", value: existingProfile.id.uuidString)
                     .execute()
+
+                log("completeOnboarding deleted old business_hours for profile -> \(existingProfile.id.uuidString)")
             } else {
+                log("completeOnboarding creating new profile")
+
                 let createPayload = CreateProfilePayload(
                     owner_user_id: currentUserId.uuidString,
                     business_name: businessName,
@@ -602,9 +771,18 @@ final class AuthViewModel {
                     .single()
                     .execute()
                     .value
+
+                log("""
+completeOnboarding created profile
+savedProfile.id -> \(savedProfile.id.uuidString)
+savedProfile.username -> \(savedProfile.username)
+savedProfile.onboardingCompleted -> \(savedProfile.onboardingCompleted)
+savedProfile.ownerUserId -> \(savedProfile.ownerUserId?.uuidString ?? "nil")
+""")
             }
 
             let profileId = savedProfile.id.uuidString
+            log("completeOnboarding profileId for next steps -> \(profileId)")
 
             let hoursPayload = draft.days.map { day in
                 CreateBusinessHourPayload(
@@ -621,6 +799,8 @@ final class AuthViewModel {
                 .insert(hoursPayload)
                 .execute()
 
+            log("completeOnboarding inserted business_hours count -> \(hoursPayload.count)")
+
             let existingMenus: [MenuRecord] = try await SupabaseManager.shared
                 .from("menus")
                 .select()
@@ -630,11 +810,15 @@ final class AuthViewModel {
                 .execute()
                 .value
 
+            log("completeOnboarding existing public menus count -> \(existingMenus.count)")
+
             let savedMenu: MenuRecord
             let defaultMenuTitle = "Menu główne"
             let defaultMenuSlug = "\(username)-menu-glowne"
 
             if let existingMenu = existingMenus.first {
+                log("completeOnboarding updating existing menu -> \(existingMenu.id.uuidString)")
+
                 let updateMenuPayload = UpdateMenuPayload(
                     title: defaultMenuTitle,
                     slug: defaultMenuSlug,
@@ -654,12 +838,18 @@ final class AuthViewModel {
                     .execute()
                     .value
 
+                log("completeOnboarding updated menu -> \(savedMenu.id.uuidString)")
+
                 try await SupabaseManager.shared
                     .from("menu_categories")
                     .delete()
                     .eq("menu_id", value: existingMenu.id.uuidString)
                     .execute()
+
+                log("completeOnboarding deleted old menu_categories for menu -> \(existingMenu.id.uuidString)")
             } else {
+                log("completeOnboarding creating new menu")
+
                 let menuPayload = CreateMenuPayload(
                     profile_id: profileId,
                     title: defaultMenuTitle,
@@ -678,6 +868,8 @@ final class AuthViewModel {
                     .single()
                     .execute()
                     .value
+
+                log("completeOnboarding created menu -> \(savedMenu.id.uuidString)")
             }
 
             let categoryPayload = CreateCategoryPayload(
@@ -696,6 +888,8 @@ final class AuthViewModel {
                 .execute()
                 .value
 
+            log("completeOnboarding created category -> \(savedCategory.id.uuidString)")
+
             if let price = Double(draft.firstItemPrice.replacingOccurrences(of: ",", with: ".")) {
                 let itemPayload = CreateItemPayload(
                     category_id: savedCategory.id.uuidString,
@@ -711,6 +905,10 @@ final class AuthViewModel {
                     .from("menu_items")
                     .insert(itemPayload)
                     .execute()
+
+                log("completeOnboarding created first menu item with price -> \(price)")
+            } else {
+                log("completeOnboarding skipped first item insert because price could not be parsed")
             }
 
             let legalBusinessName = draft.legalBusinessName.trimmed.isEmpty
@@ -764,22 +962,117 @@ final class AuthViewModel {
                 .upsert(legalPayload, onConflict: "profile_id")
                 .execute()
 
+            log("completeOnboarding upserted venue_legal_details")
+
             profile = savedProfile
             needsOnboarding = false
             OneSignal.login(savedProfile.id.uuidString)
+
+            log("""
+completeOnboarding local state updated
+profile.id -> \(savedProfile.id.uuidString)
+needsOnboarding -> \(needsOnboarding)
+""")
+
+            do {
+                let profilesAfterSave: [Profile] = try await SupabaseManager.shared
+                    .from("profiles")
+                    .select()
+                    .eq("owner_user_id", value: currentUserId.uuidString)
+                    .limit(1)
+                    .execute()
+                    .value
+
+                log("completeOnboarding verification fetch count -> \(profilesAfterSave.count)")
+
+                if let verifiedProfile = profilesAfterSave.first {
+                    log("""
+completeOnboarding verification profile found
+verifiedProfile.id -> \(verifiedProfile.id.uuidString)
+verifiedProfile.username -> \(verifiedProfile.username)
+verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
+""")
+                } else {
+                    log("completeOnboarding verification fetch returned no profile")
+                }
+            } catch {
+                logError("completeOnboarding verification fetch failed", error: error)
+            }
+
             resetOnboardingState()
+            log("completeOnboarding resetOnboardingState called after success")
         } catch {
+            logError("completeOnboarding failed", error: error)
             errorMessage = friendlyErrorMessage(from: error)
+            log("completeOnboarding friendly error -> \(errorMessage ?? "nil")")
             await loadProfileStatus()
         }
     }
 
-    func signOut() async {
+    func deleteAccount() async {
+        guard !isLoading else { return }
+        guard let currentUserId else {
+            errorMessage = "Nie znaleziono zalogowanego użytkownika."
+            log("deleteAccount aborted because currentUserId is nil")
+            return
+        }
+
+        log("deleteAccount started for user -> \(currentUserId.uuidString)")
+
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
 
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            logState("deleteAccount finished")
+        }
+
+        do {
+            let ownedProfiles: [UsernameCheckProfile] = try await SupabaseManager.shared
+                .from("profiles")
+                .select("id")
+                .eq("owner_user_id", value: currentUserId.uuidString)
+                .limit(1)
+                .execute()
+                .value
+
+            log("deleteAccount ownedProfiles count -> \(ownedProfiles.count)")
+
+            if let ownedProfile = ownedProfiles.first {
+                log("deleteAccount deleting profile cascade -> \(ownedProfile.id.uuidString)")
+                try await deleteProfileCascade(profileId: ownedProfile.id)
+            }
+
+            OneSignal.logout()
+
+            do {
+                try await SupabaseManager.shared.auth.signOut()
+            } catch {
+                logError("deleteAccount signOut failed", error: error)
+            }
+
+            isAuthenticated = false
+            needsOnboarding = false
+            self.currentUserId = nil
+            profile = nil
+            resetOnboardingState()
+        } catch {
+            logError("deleteAccount failed", error: error)
+            errorMessage = friendlyErrorMessage(from: error)
+        }
+    }
+
+    func signOut() async {
+        log("signOut started")
+        isLoading = true
+        errorMessage = nil
+        noticeMessage = nil
+
+        defer {
+            isLoading = false
+            logState("signOut finished")
+        }
 
         do {
             try await SupabaseManager.shared.auth.signOut()
@@ -791,11 +1084,13 @@ final class AuthViewModel {
             profile = nil
             resetOnboardingState()
         } catch {
+            logError("signOut failed", error: error)
             errorMessage = "Nie udało się wylogować."
         }
     }
 
     func resetOnboardingState() {
+        log("resetOnboardingState called")
         onboardingDraft = OnboardingDraft()
         onboardingStep = .basicInfo
         usernameValidationState = .idle
@@ -804,15 +1099,89 @@ final class AuthViewModel {
         noticeMessage = nil
     }
 
+    private func deleteProfileCascade(profileId: UUID) async throws {
+        let profileIdString = profileId.uuidString
+        log("deleteProfileCascade started profileId -> \(profileIdString)")
+
+        let menus: [MenuIdRecord] = try await SupabaseManager.shared
+            .from("menus")
+            .select("id")
+            .eq("profile_id", value: profileIdString)
+            .execute()
+            .value
+
+        log("deleteProfileCascade menus count -> \(menus.count)")
+
+        for menu in menus {
+            let categories: [MenuCategoryIdRecord] = try await SupabaseManager.shared
+                .from("menu_categories")
+                .select("id")
+                .eq("menu_id", value: menu.id.uuidString)
+                .execute()
+                .value
+
+            log("deleteProfileCascade categories count for menu \(menu.id.uuidString) -> \(categories.count)")
+
+            for category in categories {
+                try await SupabaseManager.shared
+                    .from("menu_items")
+                    .delete()
+                    .eq("category_id", value: category.id.uuidString)
+                    .execute()
+
+                log("deleteProfileCascade deleted menu_items for category -> \(category.id.uuidString)")
+            }
+
+            try await SupabaseManager.shared
+                .from("menu_categories")
+                .delete()
+                .eq("menu_id", value: menu.id.uuidString)
+                .execute()
+
+            log("deleteProfileCascade deleted categories for menu -> \(menu.id.uuidString)")
+        }
+
+        try await SupabaseManager.shared
+            .from("menus")
+            .delete()
+            .eq("profile_id", value: profileIdString)
+            .execute()
+
+        try await SupabaseManager.shared
+            .from("business_hours")
+            .delete()
+            .eq("profile_id", value: profileIdString)
+            .execute()
+
+        try await SupabaseManager.shared
+            .from("venue_legal_details")
+            .delete()
+            .eq("profile_id", value: profileIdString)
+            .execute()
+
+        try await SupabaseManager.shared
+            .from("profiles")
+            .delete()
+            .eq("id", value: profileIdString)
+            .execute()
+
+        log("deleteProfileCascade finished profileId -> \(profileIdString)")
+    }
+
     private func preloadOnboardingDraftIfNeeded(for profile: Profile) async {
-        guard onboardingDraft.businessName.trimmed.isEmpty else { return }
+        guard onboardingDraft.businessName.trimmed.isEmpty else {
+            log("preloadOnboardingDraftIfNeeded skipped because draft already has businessName")
+            return
+        }
+
+        log("preloadOnboardingDraftIfNeeded started for profile -> \(profile.id.uuidString)")
 
         onboardingDraft.businessName = profile.businessName
         onboardingDraft.description = profile.description ?? ""
         onboardingDraft.address = profile.address ?? ""
         onboardingDraft.phone = profile.phone ?? ""
         onboardingDraft.username = profile.username.slugified
-        onboardingDraft.accentColorHex = profile.accentColor ?? "#FF0043"
+        onboardingDraft.accentColorHex = profile.accentColor ?? "#FFAA00"
         onboardingDraft.isAcceptingOrders = profile.isAcceptingOrders
         onboardingDraft.slotIntervalMinutes = profile.slotIntervalMinutes ?? 15
         onboardingDraft.smsConfirmationEnabled = profile.smsConfirmationEnabled
@@ -824,6 +1193,8 @@ final class AuthViewModel {
 
         usernameValidationState = .available
         lastCheckedUsername = profile.username.slugified
+
+        log("preloadOnboardingDraftIfNeeded finished username -> \(onboardingDraft.username)")
     }
 
     private func validateDraftForCompletion(_ draft: OnboardingDraft) throws {
@@ -940,7 +1311,12 @@ final class AuthViewModel {
     }
 
     private func fetchExistingOwnedProfileId() async throws -> UUID? {
-        guard let currentUserId else { return nil }
+        guard let currentUserId else {
+            log("fetchExistingOwnedProfileId currentUserId is nil")
+            return nil
+        }
+
+        log("fetchExistingOwnedProfileId started for user -> \(currentUserId.uuidString)")
 
         let existingProfiles: [UsernameCheckProfile] = try await SupabaseManager.shared
             .from("profiles")
@@ -950,11 +1326,18 @@ final class AuthViewModel {
             .execute()
             .value
 
-        return existingProfiles.first?.id
+        let foundId = existingProfiles.first?.id
+        log("fetchExistingOwnedProfileId result -> \(foundId?.uuidString ?? "nil")")
+        return foundId
     }
 
     private func findExistingNIPUsage(nip: String, excludingProfileId: UUID?) async throws -> [ExistingNIPRecord] {
-        guard !nip.trimmed.isEmpty else { return [] }
+        guard !nip.trimmed.isEmpty else {
+            log("findExistingNIPUsage skipped because nip empty")
+            return []
+        }
+
+        log("findExistingNIPUsage started nip -> \(nip.trimmed), excluding -> \(excludingProfileId?.uuidString ?? "nil")")
 
         let rows: [ExistingNIPRecord] = try await SupabaseManager.shared
             .from("venue_legal_details")
@@ -963,14 +1346,20 @@ final class AuthViewModel {
             .execute()
             .value
 
+        log("findExistingNIPUsage raw rows count -> \(rows.count)")
+
         guard let excludingProfileId else {
             return rows
         }
 
-        return rows.filter { $0.profile_id != excludingProfileId }
+        let filtered = rows.filter { $0.profile_id != excludingProfileId }
+        log("findExistingNIPUsage filtered rows count -> \(filtered.count)")
+        return filtered
     }
 
     private func isUsernameAvailable(_ username: String, excludingProfileId: UUID?) async throws -> Bool {
+        log("isUsernameAvailable started username -> \(username.slugified), excluding -> \(excludingProfileId?.uuidString ?? "nil")")
+
         let params: [String: AnyJSON] = [
             "check_username": .string(username.slugified),
             "exclude_profile_id": excludingProfileId.map { .string($0.uuidString) } ?? .null
@@ -983,16 +1372,19 @@ final class AuthViewModel {
         let data = response.data
 
         if let boolValue = try? JSONDecoder().decode(Bool.self, from: data) {
+            log("isUsernameAvailable decoded bool -> \(boolValue)")
             return boolValue
         }
 
         if let stringValue = String(data: data, encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased() {
+            log("isUsernameAvailable raw string -> \(stringValue)")
             if stringValue == "true" { return true }
             if stringValue == "false" { return false }
         }
 
+        log("isUsernameAvailable failed to decode response")
         throw Self.makeFriendlyError("Nie udało się sprawdzić dostępności linku.")
     }
 
@@ -1001,8 +1393,15 @@ final class AuthViewModel {
         bucket: String,
         path: String
     ) async throws -> String? {
-        guard let data else { return nil }
-        return try await SupabaseManager.uploadImage(data: data, bucket: bucket, path: path)
+        guard let data else {
+            log("uploadImageIfNeeded skipped for bucket -> \(bucket), path -> \(path)")
+            return nil
+        }
+
+        log("uploadImageIfNeeded started bucket -> \(bucket), path -> \(path), bytes -> \(data.count)")
+        let url = try await SupabaseManager.uploadImage(data: data, bucket: bucket, path: path)
+        log("uploadImageIfNeeded success url -> \(url)")
+        return url
     }
 
     private func isValidEmail(_ value: String) -> Bool {
@@ -1014,7 +1413,10 @@ final class AuthViewModel {
     }
 
     private func friendlyErrorMessage(from error: Error) -> String {
-        let message = error.localizedDescription.lowercased()
+        let raw = error.localizedDescription
+        let message = raw.lowercased()
+
+        log("friendlyErrorMessage input -> \(raw)")
 
         if message.contains("profiles_username_key") {
             return "Ten link jest już zajęty. Wybierz inny."
@@ -1034,7 +1436,7 @@ final class AuthViewModel {
         }
 
         if message.contains("row-level security") {
-            return "Brak uprawnień do zapisania danych. Sprawdź polityki RLS w Supabase."
+            return "Brak uprawnień do zapisania lub usunięcia danych. Sprawdź polityki RLS w Supabase."
         }
 
         return error.localizedDescription
@@ -1050,21 +1452,9 @@ final class AuthViewModel {
 }
 
 private extension String {
-    var trimmed: String {
-        trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
     var nilIfEmpty: String? {
-        let value = trimmed
+        let value = trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
-    }
-
-    var slugified: String {
-        trimmed
-            .lowercased()
-            .folding(options: .diacriticInsensitive, locale: .current)
-            .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
-            .replacingOccurrences(of: "^-+|-+$", with: "", options: .regularExpression)
     }
 }
 

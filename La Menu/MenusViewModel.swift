@@ -74,9 +74,7 @@ final class MenusViewModel {
             throw NSError(
                 domain: "MenusViewModel",
                 code: 1,
-                userInfo: [
-                    NSLocalizedDescriptionKey: "Nie udało się utworzyć menu"
-                ]
+                userInfo: [NSLocalizedDescriptionKey: "Nie udało się utworzyć menu"]
             )
         }
 
@@ -126,20 +124,14 @@ final class MenusViewModel {
         name: String,
         description: String,
         price: Double,
-        oldPrice: Double? = nil,
         weight: String = "",
-        allergens: String = "",
-        tags: String = "",
-        isRecommended: Bool = false,
-        isSpicy: Bool = false,
-        isVegetarian: Bool = false,
+        allergensText: String = "",
         imageData: Data? = nil
     ) async {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanWeight = weight.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanAllergens = allergens.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanTags = tags.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanAllergensText = allergensText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !cleanName.isEmpty else { return }
 
@@ -153,19 +145,21 @@ final class MenusViewModel {
                 uploadedImageURL = nil
             }
 
+            let allergensArray: [String]? = cleanAllergensText.isEmpty
+                ? nil
+                : cleanAllergensText
+                    .split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+
             struct InsertItem: Encodable {
                 let category_id: UUID
                 let name: String
                 let description: String?
                 let price: Double
-                let old_price: Double?
                 let weight: String?
                 let image_url: String?
-                let allergens: String?
-                let tags: String?
-                let is_recommended: Bool
-                let is_spicy: Bool
-                let is_vegetarian: Bool
+                let allergens: [String]?
                 let is_available: Bool
                 let sort_order: Int
             }
@@ -177,14 +171,9 @@ final class MenusViewModel {
                 name: cleanName,
                 description: cleanDescription.isEmpty ? nil : cleanDescription,
                 price: price,
-                old_price: oldPrice,
                 weight: cleanWeight.isEmpty ? nil : cleanWeight,
                 image_url: uploadedImageURL,
-                allergens: cleanAllergens.isEmpty ? nil : cleanAllergens,
-                tags: cleanTags.isEmpty ? nil : cleanTags,
-                is_recommended: isRecommended,
-                is_spicy: isSpicy,
-                is_vegetarian: isVegetarian,
+                allergens: allergensArray,
                 is_available: true,
                 sort_order: sortOrder
             )
@@ -192,6 +181,62 @@ final class MenusViewModel {
             try await SupabaseManager.shared
                 .from("menu_items")
                 .insert(payload)
+                .execute()
+
+            try await reloadCurrentMenu()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func updateItem(_ item: MenuItem, with draft: MenuItemDraft) async {
+        let cleanName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanDescription = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanWeight = draft.weight.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanAllergensText = draft.allergensText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !cleanName.isEmpty else { return }
+
+        errorMessage = nil
+
+        do {
+            let finalImageURL: String?
+
+            if let imageData = draft.imageData, !imageData.isEmpty {
+                finalImageURL = try await uploadItemImage(data: imageData)
+            } else {
+                finalImageURL = item.imageURL
+            }
+
+            let allergensArray: [String]? = cleanAllergensText.isEmpty
+                ? nil
+                : cleanAllergensText
+                    .split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+
+            struct UpdateItem: Encodable {
+                let name: String
+                let description: String?
+                let price: Double
+                let weight: String?
+                let image_url: String?
+                let allergens: [String]?
+            }
+
+            let payload = UpdateItem(
+                name: cleanName,
+                description: cleanDescription.isEmpty ? nil : cleanDescription,
+                price: draft.price,
+                weight: cleanWeight.isEmpty ? nil : cleanWeight,
+                image_url: finalImageURL,
+                allergens: allergensArray
+            )
+
+            try await SupabaseManager.shared
+                .from("menu_items")
+                .update(payload)
+                .eq("id", value: item.id.uuidString)
                 .execute()
 
             try await reloadCurrentMenu()
@@ -260,8 +305,8 @@ final class MenusViewModel {
         let allItems = try await itemsTask
         let categoryIDs = Set(loadedCategories.map(\.id))
 
-        self.categories = loadedCategories
-        self.items = allItems.filter { categoryIDs.contains($0.categoryID) }
+        categories = loadedCategories
+        items = allItems.filter { categoryIDs.contains($0.categoryID) }
     }
 
     private func uploadItemImage(data: Data) async throws -> String {
@@ -284,5 +329,12 @@ final class MenusViewModel {
             .getPublicURL(path: fileName)
 
         return publicURL.absoluteString
+    }
+
+    private func parseAllergens(from text: String) -> [String] {
+        text
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 }

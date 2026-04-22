@@ -71,6 +71,12 @@ struct MenuDetailView: View {
                                                     .font(.caption)
                                                     .foregroundStyle(.secondary)
                                             }
+
+                                            if let allergens = item.allergens, !allergens.isEmpty {
+                                                Text("Alergeny: \(allergens)")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
                                         }
 
                                         Spacer()
@@ -79,38 +85,11 @@ struct MenuDetailView: View {
                                             Text("\(item.price, specifier: "%.0f") zł")
                                                 .font(.headline)
 
-                                            if let oldPrice = item.oldPrice {
-                                                Text("\(oldPrice, specifier: "%.0f") zł")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                                    .strikethrough()
+                                            if !item.isAvailable {
+                                                Text("Niedostępne")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.red)
                                             }
-                                        }
-                                    }
-
-                                    HStack(spacing: 8) {
-                                        if item.isRecommended {
-                                            Text("Polecane")
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                        }
-
-                                        if item.isSpicy {
-                                            Text("Pikantne")
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                        }
-
-                                        if item.isVegetarian {
-                                            Text("Wege")
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                        }
-
-                                        if !item.isAvailable {
-                                            Text("Niedostępne")
-                                                .font(.caption2)
-                                                .foregroundStyle(.red)
                                         }
                                     }
                                 }

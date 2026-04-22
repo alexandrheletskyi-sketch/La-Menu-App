@@ -16,6 +16,42 @@ final class HomeDashboardViewModel {
     var isLoading = false
     var errorMessage: String?
 
+    // Tymczasowo zostawiamy prostą wartość
+    // Później możesz tu podpiąć realną logikę z business_hours / slot settings
+    var isWithinWorkingHours: Bool = true
+
+    var isEffectivelyAcceptingOrders: Bool {
+        guard let profile else { return false }
+
+        if !profile.isAcceptingOrders {
+            return false
+        }
+
+        if isWithinWorkingHours {
+            return true
+        }
+
+        return profile.continueAfterHours
+    }
+
+    var effectiveOrdersStatusTitle: String {
+        guard let profile else { return "Zamówienia wstrzymane" }
+
+        if !profile.isAcceptingOrders {
+            return "Zamówienia wstrzymane"
+        }
+
+        if isWithinWorkingHours {
+            return "Otwarte na zamówienia"
+        }
+
+        if profile.continueAfterHours {
+            return "Przedłużone przyjmowanie zamówień"
+        }
+
+        return "Poza godzinami pracy"
+    }
+
     func load(for userId: UUID) async {
         isLoading = true
         errorMessage = nil
@@ -37,6 +73,7 @@ final class HomeDashboardViewModel {
                 self.revenueToday = 0
                 self.recentOrders = []
                 self.orderItemsByOrderId = [:]
+                self.isWithinWorkingHours = false
                 return
             }
 
@@ -83,6 +120,11 @@ final class HomeDashboardViewModel {
                 self.orderItemsByOrderId = [:]
             }
 
+            // Tymczasowo:
+            // jeśli ręczne przyjmowanie jest włączone, pokazujemy lokal jako aktywny
+            // później możesz tu wstawić realne wyliczenie na podstawie godzin pracy
+            self.isWithinWorkingHours = true
+
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -93,36 +135,40 @@ final class HomeDashboardViewModel {
 
         let newValue = !profile.isAcceptingOrders
 
+        struct AcceptingOrdersUpdatePayload: Encodable {
+            let is_accepting_orders: Bool
+        }
+
         do {
             try await SupabaseManager.shared
                 .from("profiles")
-                .update(["is_accepting_orders": newValue])
+                .update(AcceptingOrdersUpdatePayload(is_accepting_orders: newValue))
                 .eq("id", value: profile.id.uuidString)
                 .execute()
 
-            self.profile = Profile(
-                id: profile.id,
-                ownerUserId: profile.ownerUserId,
-                businessName: profile.businessName,
-                username: profile.username,
-                description: profile.description,
-                phone: profile.phone,
-                email: profile.email,
-                address: profile.address,
-                logoURL: profile.logoURL,
-                coverURL: profile.coverURL,
-                isActive: profile.isActive,
-                isAcceptingOrders: newValue,
-                onboardingCompleted: profile.onboardingCompleted,
-                pickupEnabled: profile.pickupEnabled,
-                deliveryEnabled: profile.deliveryEnabled,
-                accentColor: profile.accentColor,
-                slotIntervalMinutes: profile.slotIntervalMinutes,
-                deliveryPricePerKm: profile.deliveryPricePerKm,
-                smsConfirmationEnabled: profile.smsConfirmationEnabled,
-                createdAt: profile.createdAt,
-                updatedAt: profile.updatedAt
-            )
+            self.profile?.isAcceptingOrders = newValue
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func toggleContinueAfterHours() async {
+        guard let profile else { return }
+
+        let newValue = !profile.continueAfterHours
+
+        struct ContinueAfterHoursUpdatePayload: Encodable {
+            let continue_after_hours: Bool
+        }
+
+        do {
+            try await SupabaseManager.shared
+                .from("profiles")
+                .update(ContinueAfterHoursUpdatePayload(continue_after_hours: newValue))
+                .eq("id", value: profile.id.uuidString)
+                .execute()
+
+            self.profile?.continueAfterHours = newValue
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -10,6 +10,7 @@ struct SlotManagementView: View {
     private let mutedText = Color.black.opacity(0.58)
     private let secondaryText = Color.black.opacity(0.42)
     private let softFill = Color.black.opacity(0.04)
+    private let strokeColor = Color.black.opacity(0.06)
     private let accentOrange = Color(red: 1.0, green: 95.0 / 255.0, blue: 43.0 / 255.0)
     private let accentOrangeSoft = Color(red: 1.0, green: 95.0 / 255.0, blue: 43.0 / 255.0).opacity(0.12)
 
@@ -28,14 +29,12 @@ struct SlotManagementView: View {
                         .tint(.black)
                 } else {
                     ScrollView(showsIndicators: false) {
-                        VStack(alignment: .leading, spacing: 18) {
-                            headerSection
-
+                        VStack(alignment: .leading, spacing: 16) {
                             if let settings = viewModel.settings {
-                                settingsCard(settings: settings)
-                                dateSelectorCard
-                                dayOverrideCard
-                                slotsCard
+                                dateSection
+                                daySection
+                                slotsSection
+                                settingsSection(settings: settings)
                             }
                         }
                         .padding(.horizontal, 20)
@@ -51,10 +50,11 @@ struct SlotManagementView: View {
             await viewModel.load()
         }
         .sheet(item: $capacityEditorSlot) { slot in
-            SlotCapacityEditorSheet(
+            SlotEditorSheet(
                 slot: slot,
                 capacityText: $capacityText,
                 accentOrange: accentOrange,
+                softFill: softFill,
                 onSave: {
                     Task {
                         await viewModel.saveCapacityOverride(for: slot, capacityText: capacityText)
@@ -67,127 +67,22 @@ struct SlotManagementView: View {
                         await viewModel.saveCapacityOverride(for: slot, capacityText: "")
                         capacityEditorSlot = nil
                     }
+                },
+                onToggleBlocked: {
+                    Task {
+                        await viewModel.toggleBlocked(for: slot, blocked: !slot.isBlocked)
+                        capacityEditorSlot = nil
+                    }
                 }
             )
-            .presentationDetents([.height(320)])
+            .presentationDetents([.height(360)])
             .presentationDragIndicator(.visible)
         }
     }
 
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Ustaw godziny, sloty, limity i najszybszy możliwy czas odbioru dla klientów")
-                .font(.slotWix(15, weight: .regular))
-                .foregroundStyle(mutedText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let errorMessage = viewModel.errorMessage, !errorMessage.isEmpty {
-                statusPill(text: errorMessage, foreground: .red, background: .red.opacity(0.10))
-            }
-
-            if let successMessage = viewModel.successMessage, !successMessage.isEmpty {
-                statusPill(text: successMessage, foreground: accentOrange, background: accentOrangeSoft)
-            }
-        }
-    }
-
-    private func settingsCard(settings: VenueSlotSettings) -> some View {
+    private var dateSection: some View {
         LMCard {
-            VStack(alignment: .leading, spacing: 18) {
-                sectionTitle("Ustawienia ogólne")
-
-                LMToggleRow(
-                    title: "Pozwól na najszybszy odbiór",
-                    subtitle: "Klient będzie mógł wybrać najszybszy dostępny termin bez wskazywania konkretnej godziny",
-                    isOn: Binding(
-                        get: { viewModel.settings?.allowAsap ?? true },
-                        set: { viewModel.settings?.allowAsap = $0 }
-                    ),
-                    accentColor: .green
-                )
-
-                VStack(spacing: 12) {
-                    stepperRow(
-                        title: "Długość slotu",
-                        value: Binding(
-                            get: { viewModel.settings?.slotDurationMinutes ?? 15 },
-                            set: { viewModel.settings?.slotDurationMinutes = $0 }
-                        ),
-                        range: [5, 10, 15, 20, 30, 45, 60],
-                        suffix: "min"
-                    )
-
-                    stepperRow(
-                        title: "Limit na slot",
-                        value: Binding(
-                            get: { viewModel.settings?.defaultCapacity ?? 3 },
-                            set: { viewModel.settings?.defaultCapacity = $0 }
-                        ),
-                        range: Array(1...20),
-                        suffix: "zam."
-                    )
-
-                    stepperRow(
-                        title: "Dni do przodu",
-                        value: Binding(
-                            get: { viewModel.settings?.daysAhead ?? 7 },
-                            set: { viewModel.settings?.daysAhead = $0 }
-                        ),
-                        range: Array(1...30),
-                        suffix: "dni"
-                    )
-
-                    stepperRow(
-                        title: "Minimalny zapas czasu",
-                        value: Binding(
-                            get: { viewModel.settings?.leadTimeMinutes ?? 30 },
-                            set: { viewModel.settings?.leadTimeMinutes = $0 }
-                        ),
-                        range: [0, 15, 30, 45, 60, 90, 120, 180],
-                        suffix: "min"
-                    )
-                }
-
-                if settings.allowAsap {
-                    LMInputField(
-                        title: "Najszybszy możliwy odbiór",
-                        subtitle: "Np. 20–25 min lub 30 min. Ten tekst będzie wyświetlany klientowi przy zamówieniu",
-                        text: Binding(
-                            get: { viewModel.settings?.earliestPickupTimeText ?? "" },
-                            set: { viewModel.settings?.earliestPickupTimeText = $0 }
-                        )
-                    )
-                }
-
-                Button {
-                    Task {
-                        await viewModel.saveSettings()
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        if viewModel.isSavingSettings {
-                            ProgressView()
-                                .tint(.white)
-                                .scaleEffect(0.9)
-                        }
-
-                        Text(viewModel.isSavingSettings ? "Zapisywanie..." : "Zapisz ustawienia")
-                            .font(.slotWix(16, weight: .semiBold))
-                            .foregroundStyle(.white)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(accentOrange)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private var dateSelectorCard: some View {
-        LMCard {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 sectionTitle("Dzień")
 
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -221,32 +116,32 @@ struct SlotManagementView: View {
                     }
                 }
 
-                Text(DateFormatter.polishDayTitle.string(from: viewModel.selectedDate).capitalized)
-                    .font(.slotWix(15, weight: .medium))
+                Text(DateFormatter.polishFullDateTitle.string(from: viewModel.selectedDate).capitalized)
+                    .font(.slotWix(14, weight: .medium))
                     .foregroundStyle(secondaryText)
             }
         }
     }
 
-    private var dayOverrideCard: some View {
+    private var daySection: some View {
         LMCard {
-            VStack(alignment: .leading, spacing: 18) {
-                sectionTitle("Zmiany dla wybranego dnia")
+            VStack(alignment: .leading, spacing: 16) {
+                sectionTitle("Godziny dnia")
 
                 LMToggleRow(
-                    title: "Zamknij cały dzień",
-                    subtitle: "Po włączeniu wszystkie sloty dla tego dnia będą niedostępne",
+                    title: "Najszybszy odbiór",
+                    subtitle: "",
                     isOn: Binding(
-                        get: { viewModel.dateOverrideDraft.isClosed },
-                        set: { viewModel.dateOverrideDraft.isClosed = $0 }
+                        get: { viewModel.settings?.allowAsap ?? true },
+                        set: { viewModel.settings?.allowAsap = $0 }
                     ),
-                    accentColor: .green
+                    tint: .green
                 )
 
                 if !viewModel.dateOverrideDraft.isClosed {
                     HStack(spacing: 12) {
                         LMTimePickerCard(
-                            title: "Otwarcie",
+                            title: "Od",
                             date: Binding(
                                 get: { viewModel.dateOverrideDraft.openDate },
                                 set: { viewModel.dateOverrideDraft.openDate = $0 }
@@ -254,72 +149,35 @@ struct SlotManagementView: View {
                         )
 
                         LMTimePickerCard(
-                            title: "Zamknięcie",
+                            title: "Do",
                             date: Binding(
                                 get: { viewModel.dateOverrideDraft.closeDate },
                                 set: { viewModel.dateOverrideDraft.closeDate = $0 }
                             )
                         )
                     }
-
-                    LMInputField(
-                        title: "Limit dla całego dnia",
-                        subtitle: "Opcjonalnie. Jeśli puste, zostaną użyte standardowe limity",
-                        text: Binding(
-                            get: { viewModel.dateOverrideDraft.capacityOverride },
-                            set: { viewModel.dateOverrideDraft.capacityOverride = $0 }
-                        ),
-                        keyboard: .numberPad
-                    )
                 }
 
-                LMInputField(
-                    title: "Notatka",
-                    subtitle: "Wewnętrzna informacja dla tego dnia",
-                    text: Binding(
-                        get: { viewModel.dateOverrideDraft.note },
-                        set: { viewModel.dateOverrideDraft.note = $0 }
-                    )
-                )
-
                 HStack(spacing: 12) {
-                    Button {
+                    secondaryButton("Reset") {
                         Task {
                             await viewModel.clearDateOverride()
                         }
-                    } label: {
-                        Text("Usuń zmiany")
-                            .font(.slotWix(15, weight: .semiBold))
-                            .foregroundStyle(.black)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(softFill)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
-                    .buttonStyle(.plain)
 
-                    Button {
+                    primaryButton("Zapisz dzień") {
                         Task {
                             await viewModel.saveDateOverride()
                         }
-                    } label: {
-                        Text("Zapisz dzień")
-                            .font(.slotWix(15, weight: .semiBold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(accentOrange)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
     }
 
-    private var slotsCard: some View {
+    private var slotsSection: some View {
         LMCard {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     sectionTitle("Sloty")
 
@@ -333,16 +191,17 @@ struct SlotManagementView: View {
                 }
 
                 if viewModel.adminSlots.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("Brak slotów")
                             .font(.slotWix(16, weight: .semiBold))
                             .foregroundStyle(.black)
 
-                        Text("Sprawdź harmonogram dnia albo ustawienia ogólne")
-                            .font(.slotWix(14, weight: .regular))
+                        Text("Sprawdź godziny tego dnia lub ustawienia slotów")
+                            .font(.slotWix(13, weight: .regular))
                             .foregroundStyle(mutedText)
                     }
                     .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(softFill)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 } else {
@@ -356,42 +215,108 @@ struct SlotManagementView: View {
         }
     }
 
+    private func settingsSection(settings: VenueSlotSettings) -> some View {
+        LMCard {
+            VStack(alignment: .leading, spacing: 16) {
+                sectionTitle("Ustawienia")
+
+                LMToggleRow(
+                    title: "Zamknij dzień",
+                    subtitle: "",
+                    isOn: Binding(
+                        get: { viewModel.dateOverrideDraft.isClosed },
+                        set: { viewModel.dateOverrideDraft.isClosed = $0 }
+                    ),
+                    tint: .green
+                )
+
+                stepperRow(
+                    title: "Długość slotu",
+                    value: Binding(
+                        get: { viewModel.settings?.slotDurationMinutes ?? 15 },
+                        set: { viewModel.settings?.slotDurationMinutes = $0 }
+                    ),
+                    range: [5, 10, 15, 20, 30, 45, 60],
+                    suffix: "min"
+                )
+
+                stepperRow(
+                    title: "Limit domyślny",
+                    value: Binding(
+                        get: { viewModel.settings?.defaultCapacity ?? 3 },
+                        set: { viewModel.settings?.defaultCapacity = $0 }
+                    ),
+                    range: Array(1...20),
+                    suffix: ""
+                )
+
+                if settings.allowAsap {
+                    LMInputField(
+                        title: "Np. 20–25 min",
+                        text: Binding(
+                            get: { viewModel.settings?.earliestPickupTimeText ?? "" },
+                            set: { viewModel.settings?.earliestPickupTimeText = $0 }
+                        )
+                    )
+                }
+
+                Button {
+                    Task {
+                        await viewModel.saveSettings()
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if viewModel.isSavingSettings {
+                            ProgressView()
+                                .tint(.white)
+                                .scaleEffect(0.9)
+                        }
+
+                        Text(viewModel.isSavingSettings ? "Zapisywanie..." : "Zapisz ustawienia")
+                            .font(.slotWix(16, weight: .semiBold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(accentOrange)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
     private func slotRow(_ slot: AdminDaySlot) -> some View {
-        VStack(spacing: 12) {
-            HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
+        Button {
+            capacityText = slot.capacityOverrideValue.map(String.init) ?? ""
+            capacityEditorSlot = slot
+        } label: {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         Text(slot.slotLabel)
                             .font(.slotWix(18, weight: .bold))
                             .foregroundStyle(.black)
 
                         if slot.hasCapacityOverride {
-                            Text("Override")
+                            Text("Limit")
                                 .font(.slotWix(11, weight: .semiBold))
                                 .foregroundStyle(accentOrange)
                                 .padding(.horizontal, 8)
-                                .padding(.vertical, 5)
+                                .padding(.vertical, 4)
                                 .background(accentOrangeSoft)
                                 .clipShape(Capsule())
                         }
                     }
 
-                    Text(slot.subtitle)
-                        .font(.slotWix(13, weight: .regular))
-                        .foregroundStyle(.black.opacity(0.52))
+                    Text("\(slot.taken) / \(slot.capacity) zamówień")
+                        .font(.slotWix(13, weight: .medium))
+                        .foregroundStyle(.black.opacity(0.56))
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 6) {
-                    Text("Zajęte \(slot.taken)/\(slot.capacity)")
-                        .font(.slotWix(14, weight: .semiBold))
-                        .foregroundStyle(.black)
-
-                    Text("Pozostało \(slot.remaining)")
-                        .font(.slotWix(12, weight: .medium))
-                        .foregroundStyle(.black.opacity(0.58))
-
+                VStack(alignment: .trailing, spacing: 8) {
                     Text(slot.statusTitle)
                         .font(.slotWix(12, weight: .semiBold))
                         .foregroundStyle(statusForeground(for: slot.status))
@@ -399,60 +324,27 @@ struct SlotManagementView: View {
                         .padding(.vertical, 6)
                         .background(statusBackground(for: slot.status))
                         .clipShape(Capsule())
-                }
-            }
 
-            HStack(spacing: 10) {
-                Button {
-                    capacityText = slot.capacityOverrideValue.map(String.init) ?? ""
-                    capacityEditorSlot = slot
-                } label: {
-                    Text("Limit slotu")
-                        .font(.slotWix(14, weight: .semiBold))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 46)
-                        .background(softFill)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    Text("Pozostało \(slot.remaining)")
+                        .font(.slotWix(12, weight: .medium))
+                        .foregroundStyle(.black.opacity(0.48))
                 }
-                .buttonStyle(.plain)
 
-                if slot.isBlocked {
-                    Button {
-                        Task {
-                            await viewModel.toggleBlocked(for: slot, blocked: false)
-                        }
-                    } label: {
-                        Text("Odblokuj")
-                            .font(.slotWix(14, weight: .semiBold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 46)
-                            .background(accentOrange)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    Button {
-                        Task {
-                            await viewModel.toggleBlocked(for: slot, blocked: true)
-                        }
-                    } label: {
-                        Text("Zablokuj")
-                            .font(.slotWix(14, weight: .semiBold))
-                            .foregroundStyle(.black)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 46)
-                            .background(softFill)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.black.opacity(0.24))
             }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(softFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(strokeColor, lineWidth: 1)
+                    )
+            )
         }
-        .padding(16)
-        .background(softFill)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .buttonStyle(.plain)
     }
 
     private func stepperRow(
@@ -477,15 +369,15 @@ struct SlotManagementView: View {
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.black)
                     .frame(width: 38, height: 38)
-                    .background(softFill)
+                    .background(Color.black.opacity(0.05))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
 
-            Text("\(value.wrappedValue) \(suffix)")
+            Text("\(value.wrappedValue)\(suffix.isEmpty ? "" : " \(suffix)")")
                 .font(.slotWix(15, weight: .semiBold))
                 .foregroundStyle(.black)
-                .frame(minWidth: 78)
+                .frame(minWidth: 72)
 
             Button {
                 guard let currentIndex = range.firstIndex(of: value.wrappedValue),
@@ -504,6 +396,49 @@ struct SlotManagementView: View {
         .padding(14)
         .background(softFill)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private func summaryChip(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.slotWix(11, weight: .semiBold))
+                .foregroundStyle(.black.opacity(0.42))
+
+            Text(value)
+                .font(.slotWix(14, weight: .semiBold))
+                .foregroundStyle(.black)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(softFill)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.slotWix(15, weight: .semiBold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(accentOrange)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func secondaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.slotWix(15, weight: .semiBold))
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(softFill)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private func sectionTitle(_ text: String) -> some View {
@@ -545,7 +480,7 @@ struct SlotManagementView: View {
         case "full":
             return .orange
         case "too_late":
-            return Color.black.opacity(0.62)
+            return .black.opacity(0.62)
         default:
             return .black
         }
@@ -567,29 +502,43 @@ struct SlotManagementView: View {
     }
 }
 
-private struct SlotCapacityEditorSheet: View {
+private struct SlotEditorSheet: View {
     let slot: AdminDaySlot
     @Binding var capacityText: String
     let accentOrange: Color
+    let softFill: Color
     let onSave: () -> Void
     let onClear: () -> Void
+    let onToggleBlocked: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Limit dla slotu \(slot.slotLabel)")
-                .font(.slotWix(24, weight: .bold))
-                .foregroundStyle(.black)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(slot.slotLabel)
+                    .font(.slotWix(24, weight: .bold))
+                    .foregroundStyle(.black)
 
-            Text("Zostaw puste, aby wrócić do domyślnego limitu")
-                .font(.slotWix(14, weight: .regular))
-                .foregroundStyle(.black.opacity(0.58))
+                Text("\(slot.taken) / \(slot.capacity) zamówień")
+                    .font(.slotWix(14, weight: .medium))
+                    .foregroundStyle(.black.opacity(0.56))
+            }
 
             LMInputField(
-                title: "Nowy limit",
-                subtitle: nil,
+                title: "Limit slotu",
                 text: $capacityText,
                 keyboard: .numberPad
             )
+
+            Button(action: onToggleBlocked) {
+                Text(slot.isBlocked ? "Odblokuj slot" : "Zablokuj slot")
+                    .font(.slotWix(15, weight: .semiBold))
+                    .foregroundStyle(slot.isBlocked ? .white : .black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(slot.isBlocked ? accentOrange : softFill)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .buttonStyle(.plain)
 
             HStack(spacing: 12) {
                 Button(action: onClear) {
@@ -598,7 +547,7 @@ private struct SlotCapacityEditorSheet: View {
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(Color.black.opacity(0.05))
+                        .background(softFill)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -622,118 +571,19 @@ private struct SlotCapacityEditorSheet: View {
     }
 }
 
-private struct LMCard<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        content
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(18)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 2)
-    }
-}
-
-private struct LMInputField: View {
-    let title: String
-    let subtitle: String?
-    @Binding var text: String
-    var keyboard: UIKeyboardType = .default
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.slotWix(13, weight: .medium))
-                .foregroundStyle(.black.opacity(0.45))
-
-            if let subtitle, !subtitle.isEmpty {
-                Text(subtitle)
-                    .font(.slotWix(12, weight: .regular))
-                    .foregroundStyle(.black.opacity(0.46))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            TextField(title, text: $text)
-                .font(.slotWix(16, weight: .medium))
-                .foregroundStyle(.black)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(keyboard)
-                .padding(.horizontal, 16)
-                .frame(height: 56)
-                .background(Color.black.opacity(0.04))
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-    }
-}
-
-private struct LMToggleRow: View {
-    let title: String
-    let subtitle: String
-    @Binding var isOn: Bool
-    let accentColor: Color
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title)
-                    .font(.slotWix(16, weight: .semiBold))
-                    .foregroundStyle(.black)
-
-                Text(subtitle)
-                    .font(.slotWix(13, weight: .regular))
-                    .foregroundStyle(.black.opacity(0.52))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer()
-
-            Toggle("", isOn: $isOn)
-                .labelsHidden()
-                .tint(accentColor)
-        }
-        .padding(16)
-        .background(Color.black.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-}
-
-private struct LMTimePickerCard: View {
-    let title: String
-    @Binding var date: Date
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.slotWix(13, weight: .medium))
-                .foregroundStyle(.black.opacity(0.45))
-
-            DatePicker(
-                "",
-                selection: $date,
-                displayedComponents: .hourAndMinute
-            )
-            .datePickerStyle(.compact)
-            .labelsHidden()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .frame(height: 54)
-            .background(Color.black.opacity(0.04))
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
 private extension Font {
     static func slotWix(_ size: CGFloat, weight: SlotWixWeight = .regular) -> Font {
         Font.custom(weight.fontName, size: size)
     }
+}
+
+private extension DateFormatter {
+    static let polishFullDateTitle: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pl_PL")
+        formatter.dateFormat = "EEEE, d MMMM"
+        return formatter
+    }()
 }
 
 private enum SlotWixWeight {

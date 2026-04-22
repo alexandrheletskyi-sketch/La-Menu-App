@@ -13,6 +13,7 @@ struct Profile: Codable, Identifiable, Hashable {
     var coverURL: String?
     var isActive: Bool
     var isAcceptingOrders: Bool
+    var continueAfterHours: Bool
     var onboardingCompleted: Bool
 
     var pickupEnabled: Bool
@@ -21,6 +22,12 @@ struct Profile: Codable, Identifiable, Hashable {
     var slotIntervalMinutes: Int?
     var deliveryPricePerKm: Double?
     var smsConfirmationEnabled: Bool
+
+    var subscriptionPlanRaw: String?
+    var smsCredits: Int?
+    var smsUsedThisMonth: Int?
+    var smsUsedCurrentMonth: Int?
+    var smsUsageMonth: String?
 
     var createdAt: String
     var updatedAt: String
@@ -38,17 +45,49 @@ struct Profile: Codable, Identifiable, Hashable {
         case coverURL = "cover_url"
         case isActive = "is_active"
         case isAcceptingOrders = "is_accepting_orders"
+        case continueAfterHours = "continue_after_hours"
         case onboardingCompleted = "onboarding_completed"
-
         case pickupEnabled = "pickup_enabled"
         case deliveryEnabled = "delivery_enabled"
         case accentColor = "accent_color"
         case slotIntervalMinutes = "slot_interval_minutes"
         case deliveryPricePerKm = "delivery_price_per_km"
         case smsConfirmationEnabled = "sms_confirmation_enabled"
-
+        case subscriptionPlanRaw = "subscription_plan"
+        case smsCredits = "sms_credits"
+        case smsUsedThisMonth = "sms_used_this_month"
+        case smsUsedCurrentMonth = "sms_used_current_month"
+        case smsUsageMonth = "sms_usage_month"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+
+    var subscriptionPlan: SubscriptionPlan {
+        SubscriptionPlan.from(subscriptionPlanRaw)
+    }
+
+    var subscriptionPlanTitle: String {
+        subscriptionPlan.title
+    }
+
+    var menuItemsLimit: Int? {
+        subscriptionPlan.menuItemLimit
+    }
+
+    var hasUnlimitedMenuItems: Bool {
+        subscriptionPlan.menuItemLimit == nil
+    }
+
+    var includedSmsCredits: Int {
+        subscriptionPlan.smsCreditsIncluded
+    }
+
+    var currentSmsCredits: Int {
+        smsCredits ?? subscriptionPlan.smsCreditsIncluded
+    }
+
+    var subscriptionDescription: String {
+        subscriptionPlan.shortDescription
     }
 }
 
@@ -119,5 +158,17 @@ struct OrderItem: Codable, Identifiable, Hashable {
         case unitPrice = "unit_price"
         case lineTotal = "line_total"
         case createdAt = "created_at"
+    }
+}
+
+struct SMSUsageOverview: Codable, Hashable {
+    var smsLimit: Int
+    var smsRemaining: Int
+    var smsUsedThisPeriod: Int
+
+    enum CodingKeys: String, CodingKey {
+        case smsLimit = "sms_limit"
+        case smsRemaining = "sms_remaining"
+        case smsUsedThisPeriod = "sms_used_this_period"
     }
 }

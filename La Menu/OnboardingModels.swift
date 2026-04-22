@@ -58,8 +58,8 @@ enum OnboardingStep: Int, CaseIterable {
     }
 }
 
-struct DayHoursDraft: Identifiable {
-    let id = UUID()
+struct DayHoursDraft: Identifiable, Equatable, Sendable {
+    var id: Int { weekday }
     let weekday: Int
     let title: String
     var isClosed: Bool
@@ -67,16 +67,16 @@ struct DayHoursDraft: Identifiable {
     var closeDate: Date
 }
 
-struct OnboardingDraft {
+struct OnboardingDraft: Equatable, Sendable {
     var businessName = ""
     var description = ""
     var address = ""
     var phone = ""
-    var logoImageData: Data?
+    var logoImageData: Data? = nil
 
     var username = ""
 
-    var accentColorHex = "#5BE47B"
+    var accentColorHex = "#FFAA00"
 
     var legalBusinessName = ""
     var businessDisplayName = ""
@@ -85,7 +85,7 @@ struct OnboardingDraft {
     var addressLine2 = ""
     var postalCode = ""
     var city = ""
-    var country = "Poland"
+    var country = "Polska"
     var contactEmail = ""
     var contactPhone = ""
     var complaintEmail = ""
@@ -107,7 +107,7 @@ struct OnboardingDraft {
     var firstItemName = ""
     var firstItemDescription = ""
     var firstItemPrice = ""
-    var firstItemImageData: Data?
+    var firstItemImageData: Data? = nil
 
     var days: [DayHoursDraft] = DayHoursDraft.defaultWeek
 }

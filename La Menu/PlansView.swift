@@ -12,7 +12,6 @@ struct PlansView: View {
     private let mutedText = Color.black.opacity(0.58)
     private let secondaryText = Color.black.opacity(0.42)
     private let softBorder = Color.black.opacity(0.08)
-    private let softFill = Color.black.opacity(0.045)
 
     var body: some View {
         NavigationStack {
@@ -72,20 +71,14 @@ struct PlansView: View {
     }
 
     private var displayPlans: [SubscriptionPlan] {
-        [.free, .business, .plus]
+        [.free, .plus, .business, .premium]
     }
 
     private var recommendedPlan: SubscriptionPlan? {
-        switch currentPlan {
-        case .free:
-            return .business
-        case .business:
-            return .plus
-        case .plus:
-            return nil
-        default:
+        if currentPlan == .business {
             return nil
         }
+        return .business
     }
 
     private var heroSection: some View {
@@ -222,12 +215,12 @@ struct PlansView: View {
     private func iconView(for plan: SubscriptionPlan) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(iconBackground(for: plan))
+                .fill(accentOrange.opacity(0.10))
                 .frame(width: 56, height: 56)
 
             Image(systemName: iconName(for: plan))
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(iconForeground(for: plan))
+                .foregroundStyle(accentOrange)
         }
     }
 
@@ -235,25 +228,25 @@ struct PlansView: View {
         switch plan {
         case .free:
             return "Free"
-        case .business:
-            return "Business"
         case .plus:
             return "Plus"
-        default:
-            return plan.title
+        case .business:
+            return "Business"
+        case .premium:
+            return "Premium"
         }
     }
 
     private func shortDescription(for plan: SubscriptionPlan) -> String {
         switch plan {
         case .free:
-            return "Dla startu i małych lokali"
-        case .business:
-            return "Dla lokali, które chcą rosnąć"
+            return "Na start dla małych lokali"
         case .plus:
-            return "Najwięcej SMS i pełna swoboda"
-        default:
-            return plan.shortDescription
+            return "Więcej SMS i pełna swoboda menu"
+        case .business:
+            return "Dla rosnących lokali z większą liczbą zamówień"
+        case .premium:
+            return "Najwyższy pakiet dla najbardziej aktywnych lokali"
         }
     }
 
@@ -261,12 +254,12 @@ struct PlansView: View {
         switch plan {
         case .free:
             return "$0"
-        case .business:
-            return "$29.99"
         case .plus:
+            return "$29.99"
+        case .business:
             return "$49.99"
-        default:
-            return "$0"
+        case .premium:
+            return "$99.99"
         }
     }
 
@@ -274,10 +267,8 @@ struct PlansView: View {
         switch plan {
         case .free:
             return "Do 20 pozycji"
-        case .business, .plus:
+        case .plus, .business, .premium:
             return "Nielimitowane"
-        default:
-            return plan.menuLimitText
         }
     }
 
@@ -285,12 +276,12 @@ struct PlansView: View {
         switch plan {
         case .free:
             return "20 SMS"
-        case .business:
-            return "200 SMS"
         case .plus:
-            return "700 SMS"
-        default:
-            return plan.smsCreditsText
+            return "200 SMS"
+        case .business:
+            return "500 SMS"
+        case .premium:
+            return "1500 SMS"
         }
     }
 
@@ -298,38 +289,12 @@ struct PlansView: View {
         switch plan {
         case .free:
             return "sparkles"
+        case .plus:
+            return "circle.grid.2x2.fill"
         case .business:
+            return "briefcase.fill"
+        case .premium:
             return "crown.fill"
-        case .plus:
-            return "circle.grid.2x2.fill"
-        default:
-            return "circle.grid.2x2.fill"
-        }
-    }
-
-    private func iconBackground(for plan: SubscriptionPlan) -> Color {
-        switch plan {
-        case .free:
-            return Color.black.opacity(0.05)
-        case .business:
-            return accentOrange.opacity(0.10)
-        case .plus:
-            return Color.black.opacity(0.05)
-        default:
-            return Color.black.opacity(0.05)
-        }
-    }
-
-    private func iconForeground(for plan: SubscriptionPlan) -> Color {
-        switch plan {
-        case .free:
-            return .black
-        case .business:
-            return accentOrange
-        case .plus:
-            return .black
-        default:
-            return .black
         }
     }
 }

@@ -202,8 +202,64 @@ final class AuthViewModel {
 """)
     }
 
+    private func logOneSignalState(_ prefix: String) {
+        print("""
+🔵 [OneSignal] \(prefix)
+   onesignalId: \(OneSignal.User.onesignalId ?? "nil")
+   push token: \(OneSignal.User.pushSubscription.token ?? "nil")
+   push id: \(OneSignal.User.pushSubscription.id ?? "nil")
+   opted in: \(OneSignal.User.pushSubscription.optedIn)
+""")
+    }
+
+    private func loginOneSignal(profileId: String, source: String) {
+        let normalizedProfileId = profileId.lowercased()
+
+        print("""
+    🟢 [OneSignal] login START
+       source: \(source)
+       external_id/profile_id: \(normalizedProfileId)
+    """)
+
+        OneSignal.login(normalizedProfileId)
+
+        print("""
+    🟢 [OneSignal] login FINISHED
+       source: \(source)
+       external_id/profile_id: \(normalizedProfileId)
+       onesignalId: \(OneSignal.User.onesignalId ?? "nil")
+       push token: \(OneSignal.User.pushSubscription.token ?? "nil")
+       push id: \(OneSignal.User.pushSubscription.id ?? "nil")
+       opted in: \(OneSignal.User.pushSubscription.optedIn)
+    """)
+    }
+
+    private func logoutOneSignal(source: String) {
+        print("""
+🟠 [OneSignal] logout START
+   source: \(source)
+   onesignalId before logout: \(OneSignal.User.onesignalId ?? "nil")
+   push token before logout: \(OneSignal.User.pushSubscription.token ?? "nil")
+   push id before logout: \(OneSignal.User.pushSubscription.id ?? "nil")
+   opted in before logout: \(OneSignal.User.pushSubscription.optedIn)
+""")
+
+        OneSignal.logout()
+
+        print("""
+🟠 [OneSignal] logout FINISHED
+   source: \(source)
+   onesignalId after logout: \(OneSignal.User.onesignalId ?? "nil")
+   push token after logout: \(OneSignal.User.pushSubscription.token ?? "nil")
+   push id after logout: \(OneSignal.User.pushSubscription.id ?? "nil")
+   opted in after logout: \(OneSignal.User.pushSubscription.optedIn)
+""")
+    }
+
     func checkSession() async {
         log("checkSession started")
+        logOneSignalState("checkSession before Supabase session")
+
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
@@ -211,6 +267,7 @@ final class AuthViewModel {
         defer {
             isLoading = false
             logState("checkSession finished")
+            logOneSignalState("checkSession finished")
         }
 
         do {
@@ -244,6 +301,7 @@ final class AuthViewModel {
         defer {
             isLoading = false
             logState("signIn finished")
+            logOneSignalState("signIn finished")
         }
 
         do {
@@ -279,6 +337,7 @@ final class AuthViewModel {
         defer {
             isLoading = false
             logState("signUp finished")
+            logOneSignalState("signUp finished")
         }
 
         do {
@@ -315,6 +374,7 @@ final class AuthViewModel {
         defer {
             isLoading = false
             logState("signInWithApple finished")
+            logOneSignalState("signInWithApple finished")
         }
 
         do {
@@ -398,6 +458,7 @@ final class AuthViewModel {
         }
 
         log("loadProfileStatus started for user -> \(currentUserId.uuidString)")
+        logOneSignalState("loadProfileStatus before fetching profile")
 
         do {
             let profiles: [Profile] = try await SupabaseManager.shared
@@ -413,7 +474,11 @@ final class AuthViewModel {
             if let existingProfile = profiles.first {
                 profile = existingProfile
                 needsOnboarding = !existingProfile.onboardingCompleted
-                OneSignal.login(existingProfile.id.uuidString)
+
+                loginOneSignal(
+                    profileId: existingProfile.id.uuidString,
+                    source: "loadProfileStatus"
+                )
 
                 log("""
 loadProfileStatus found profile
@@ -439,6 +504,7 @@ needsOnboarding -> \(needsOnboarding)
         }
 
         logState("loadProfileStatus finished")
+        logOneSignalState("loadProfileStatus finished")
     }
 
     func updateUsernameDraft(_ rawValue: String) {
@@ -622,6 +688,8 @@ hasLogoImageData -> \(draft.logoImageData != nil)
 hasFirstItemImageData -> \(draft.firstItemImageData != nil)
 """)
 
+        logOneSignalState("completeOnboarding before saving profile")
+
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
@@ -629,6 +697,7 @@ hasFirstItemImageData -> \(draft.firstItemImageData != nil)
         defer {
             isLoading = false
             logState("completeOnboarding finished")
+            logOneSignalState("completeOnboarding finished")
         }
 
         do {
@@ -966,7 +1035,11 @@ savedProfile.ownerUserId -> \(savedProfile.ownerUserId?.uuidString ?? "nil")
 
             profile = savedProfile
             needsOnboarding = false
-            OneSignal.login(savedProfile.id.uuidString)
+
+            loginOneSignal(
+                profileId: savedProfile.id.uuidString,
+                source: "completeOnboarding"
+            )
 
             log("""
 completeOnboarding local state updated
@@ -1026,6 +1099,7 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
         defer {
             isLoading = false
             logState("deleteAccount finished")
+            logOneSignalState("deleteAccount finished")
         }
 
         do {
@@ -1044,7 +1118,7 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
                 try await deleteProfileCascade(profileId: ownedProfile.id)
             }
 
-            OneSignal.logout()
+            logoutOneSignal(source: "deleteAccount")
 
             do {
                 try await SupabaseManager.shared.auth.signOut()
@@ -1072,11 +1146,13 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
         defer {
             isLoading = false
             logState("signOut finished")
+            logOneSignalState("signOut finished")
         }
 
         do {
             try await SupabaseManager.shared.auth.signOut()
-            OneSignal.logout()
+
+            logoutOneSignal(source: "signOut")
 
             isAuthenticated = false
             needsOnboarding = false

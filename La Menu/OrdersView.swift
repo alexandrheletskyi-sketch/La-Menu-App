@@ -4,19 +4,45 @@ import Combine
 struct OrdersView: View {
     @Environment(AuthViewModel.self) private var auth
     @State private var viewModel = OrdersViewModel()
+    @State private var selectedFilter: OrderFilter = .today
 
     private let refreshTimer = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
 
-    private let pageBackground = Color(red: 0.965, green: 0.965, blue: 0.965)
+    private let pageBackground = Color.white
     private let cardBackground = Color.white
-    private let softFill = Color.black.opacity(0.04)
+
+    private let softFill = Color.black.opacity(0.035)
     private let softBorder = Color.black.opacity(0.08)
-    private let mutedText = Color.black.opacity(0.58)
+    private let mutedText = Color.black.opacity(0.56)
+    private let secondaryText = Color.black.opacity(0.36)
+
     private let accentOrange = Color(red: 1.000, green: 0.557, blue: 0.176)
-    private let accentGreen = Color(red: 99/255, green: 225/255, blue: 141/255)
-    private let accentGreenText = Color(red: 0.22, green: 0.58, blue: 0.34)
-    private let accentBlue = Color(red: 0.86, green: 0.93, blue: 1.00)
-    private let accentBlueText = Color(red: 0.12, green: 0.52, blue: 0.96)
+    private let accentGreen = Color(red: 99 / 255, green: 225 / 255, blue: 141 / 255)
+    private let accentYellow = Color(red: 1.0, green: 0.82, blue: 0.25)
+
+    private let accentGreenText = Color(red: 0.12, green: 0.45, blue: 0.24)
+    private let accentYellowText = Color(red: 0.55, green: 0.36, blue: 0.02)
+    private let accentOrangeText = Color(red: 0.72, green: 0.30, blue: 0.02)
+
+    enum OrderFilter: String, CaseIterable {
+        case today
+        case all
+        case new
+        case ready
+
+        var title: String {
+            switch self {
+            case .today:
+                return "Dzisiaj"
+            case .all:
+                return "Wszystkie"
+            case .new:
+                return "Nowe"
+            case .ready:
+                return "Gotowe"
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -42,7 +68,7 @@ struct OrdersView: View {
 
     private func content(profileID: UUID) -> some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 22) {
                 headerSection
 
                 if let errorMessage = viewModel.errorMessage, !errorMessage.isEmpty {
@@ -51,7 +77,7 @@ struct OrdersView: View {
 
                 if viewModel.isLoading && viewModel.orders.isEmpty {
                     loadingCard
-                } else if viewModel.orders.isEmpty {
+                } else if filteredOrders.isEmpty {
                     emptyStateCard
                 } else {
                     ordersListSection
@@ -61,6 +87,7 @@ struct OrdersView: View {
             .padding(.top, 14)
             .padding(.bottom, 120)
         }
+        .background(Color.white)
         .task {
             await viewModel.load(profileID: profileID)
         }
@@ -75,78 +102,81 @@ struct OrdersView: View {
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Zamówienia")
-                .font(.custom("WixMadeforDisplay-Bold", size: 44))
-                .foregroundStyle(.black)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Zamówienia")
+                    .font(.custom("WixMadeforDisplay-Bold", size: 44))
+                    .foregroundStyle(.black)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
-            Text("Monitoruj nowe zamówienia, aktualizuj ich status i miej wszystko pod kontrolą")
-                .font(.custom("WixMadeforDisplay-Regular", size: 17))
-                .foregroundStyle(mutedText)
-                .lineSpacing(2)
-                .frame(maxWidth: 320, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 10) {
-                summaryPill(
-                    title: "Wszystkie",
-                    value: viewModel.orders.count,
-                    foreground: accentBlueText,
-                    background: accentBlue
-                )
-
-                summaryPill(
-                    title: "Nowe",
-                    value: newOrdersCount,
-                    foreground: accentBlueText,
-                    background: accentBlue
-                )
-
-                if viewModel.isLoading {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .scaleEffect(0.8)
-
-                        Text("Odświeżanie")
-                            .font(.custom("WixMadeforDisplay-Medium", size: 13))
-                    }
+                Text("Monitoruj zamówienia, aktualizuj statusy i obsługuj klientów z jednego miejsca")
+                    .font(.custom("WixMadeforDisplay-Regular", size: 17))
                     .foregroundStyle(mutedText)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.05))
-                    .clipShape(Capsule())
+                    .lineSpacing(2)
+                    .frame(maxWidth: 350, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    filterPill(filter: .today, value: todayOrdersCount)
+                    filterPill(filter: .all, value: viewModel.orders.count)
+                    filterPill(filter: .new, value: newOrdersCount)
+                    filterPill(filter: .ready, value: readyOrdersCount)
+
+                    if viewModel.isLoading {
+                        refreshPill
+                    }
                 }
             }
         }
     }
 
-    private func summaryPill(title: String, value: Int, foreground: Color, background: Color) -> some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.custom("WixMadeforDisplay-Medium", size: 13))
+    private var refreshPill: some View {
+        HStack(spacing: 7) {
+            ProgressView()
+                .scaleEffect(0.72)
 
-            Text("\(value)")
-                .font(.custom("WixMadeforDisplay-SemiBold", size: 13))
+            Text("Odświeżanie")
+                .font(.custom("WixMadeforDisplay-Medium", size: 13))
         }
-        .foregroundStyle(foreground)
+        .foregroundStyle(mutedText)
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(background)
+        .padding(.vertical, 9)
+        .background(Color.black.opacity(0.035))
         .clipShape(Capsule())
+    }
+
+    private func filterPill(filter: OrderFilter, value: Int) -> some View {
+        let isActive = selectedFilter == filter
+        let activeBackground: Color = filter == .today ? accentOrange.opacity(0.22) : Color.black
+        let activeForeground: Color = filter == .today ? accentOrangeText : .white
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                selectedFilter = filter
+            }
+        } label: {
+            HStack(spacing: 7) {
+                Text(filter.title)
+                    .font(.custom("WixMadeforDisplay-Medium", size: 13))
+
+                Text("\(value)")
+                    .font(.custom("WixMadeforDisplay-SemiBold", size: 13))
+            }
+            .foregroundStyle(isActive ? activeForeground : .black.opacity(0.72))
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .background(isActive ? activeBackground : Color.black.opacity(0.035))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func errorCard(_ message: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.red.opacity(0.10))
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.red)
-                )
+            emojiBubble("⚠️")
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Wystąpił problem")
@@ -162,7 +192,7 @@ struct OrdersView: View {
             Spacer()
         }
         .padding(18)
-        .uberCardStyle()
+        .laMenuCardStyle()
     }
 
     private var loadingCard: some View {
@@ -175,36 +205,29 @@ struct OrdersView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .uberCardStyle()
+        .laMenuCardStyle()
     }
 
     private var emptyStateCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(softFill)
-                .frame(width: 52, height: 52)
-                .overlay(
-                    Image(systemName: "tray")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.black)
-                )
+            emojiBubble("🧾", size: 52, fontSize: 23)
 
-            Text("Brak zamówień")
+            Text(emptyStateTitle)
                 .font(.custom("WixMadeforDisplay-SemiBold", size: 22))
                 .foregroundStyle(.black)
 
-            Text("Nowe zamówienia pojawią się tutaj automatycznie")
+            Text(emptyStateSubtitle)
                 .font(.custom("WixMadeforDisplay-Regular", size: 15))
                 .foregroundStyle(mutedText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .uberCardStyle()
+        .laMenuCardStyle()
     }
 
     private var ordersListSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            ForEach(viewModel.orders) { order in
+            ForEach(filteredOrders) { order in
                 orderCard(order)
             }
         }
@@ -213,10 +236,12 @@ struct OrdersView: View {
     private func orderCard(_ order: Order) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(order.customerName?.isEmpty == false ? order.customerName! : "Bez imienia")
-                        .font(.custom("WixMadeforDisplay-Bold", size: 26))
+                        .font(.custom("WixMadeforDisplay-Bold", size: 27))
                         .foregroundStyle(.black)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
 
                     Text(displayFulfillmentType(order.fulfillmentType))
                         .font(.custom("WixMadeforDisplay-Regular", size: 15))
@@ -224,64 +249,51 @@ struct OrdersView: View {
 
                     Text(formatHeaderDate(order.createdAt))
                         .font(.custom("WixMadeforDisplay-Regular", size: 14))
-                        .foregroundStyle(mutedText)
+                        .foregroundStyle(secondaryText)
                 }
 
                 Spacer(minLength: 12)
 
                 VStack(alignment: .trailing, spacing: 10) {
                     Text("\(Int(order.totalAmount)) zł")
-                        .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
-                        .foregroundStyle(accentGreenText)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(accentGreen.opacity(0.18))
+                        .font(.custom("WixMadeforDisplay-Bold", size: 16))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 9)
+                        .background(Color.black.opacity(0.045))
                         .clipShape(Capsule())
 
                     statusBadge(order.status)
                 }
             }
 
-            Rectangle()
-                .fill(Color.black.opacity(0.07))
-                .frame(height: 1)
+            Divider()
+                .background(Color.black.opacity(0.06))
 
-            VStack(spacing: 14) {
+            VStack(spacing: 15) {
                 let itemsText = viewModel.itemsText(for: order)
+
                 if !itemsText.isEmpty {
-                    orderDetailRow(
-                        icon: "bag",
-                        title: "Produkty",
-                        value: itemsText
-                    )
+                    orderDetailRow(emoji: "🛒", title: "Produkty", value: itemsText)
                 }
 
                 if let phone = order.customerPhone, !phone.isEmpty {
-                    orderDetailRow(
-                        icon: "phone",
-                        title: "Telefon",
-                        value: phone
-                    )
+                    orderDetailRow(emoji: "📞", title: "Telefon", value: phone)
                 }
 
                 orderDetailRow(
-                    icon: order.fulfillmentType == "pickup" ? "storefront" : "car",
+                    emoji: order.fulfillmentType == "pickup" ? "🏪" : "🚗",
                     title: "Sposób odbioru",
                     value: displayFulfillmentType(order.fulfillmentType)
                 )
 
                 if let pickupTime = order.pickupTime, !pickupTime.isEmpty {
-                    orderDetailRow(
-                        icon: "clock",
-                        title: "Godzina odbioru",
-                        value: pickupTime
-                    )
+                    orderDetailRow(emoji: "⏰", title: "Godzina odbioru", value: pickupTime)
                 }
             }
 
-            Rectangle()
-                .fill(Color.black.opacity(0.07))
-                .frame(height: 1)
+            Divider()
+                .background(Color.black.opacity(0.06))
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("Zmień status")
@@ -293,7 +305,8 @@ struct OrdersView: View {
                         title: "Nowe",
                         statusValue: "new",
                         currentStatus: order.status,
-                        isProminent: false
+                        activeBackground: accentGreen,
+                        activeForeground: .black
                     ) {
                         Task {
                             await viewModel.updateStatus(orderID: order.id, status: "new")
@@ -304,7 +317,8 @@ struct OrdersView: View {
                         title: "Przyjęte",
                         statusValue: "accepted",
                         currentStatus: order.status,
-                        isProminent: false
+                        activeBackground: accentYellow,
+                        activeForeground: .black
                     ) {
                         Task {
                             await viewModel.updateStatus(orderID: order.id, status: "accepted")
@@ -315,29 +329,28 @@ struct OrdersView: View {
                         title: "Gotowe",
                         statusValue: "ready",
                         currentStatus: order.status,
-                        isProminent: true
+                        activeBackground: accentOrange,
+                        activeForeground: .black
                     ) {
                         Task {
                             await viewModel.updateStatus(orderID: order.id, status: "ready")
+                            selectedFilter = .ready
                         }
                     }
                 }
             }
         }
         .padding(20)
-        .uberCardStyle()
+        .laMenuCardStyle()
     }
 
-    private func orderDetailRow(icon: String, title: String, value: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(softFill)
-                .frame(width: 36, height: 36)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.black)
-                )
+    private func orderDetailRow(
+        emoji: String,
+        title: String,
+        value: String
+    ) -> some View {
+        HStack(alignment: .top, spacing: 13) {
+            emojiBubble(emoji)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
@@ -354,11 +367,26 @@ struct OrdersView: View {
         }
     }
 
+    private func emojiBubble(
+        _ emoji: String,
+        size: CGFloat = 38,
+        fontSize: CGFloat = 18
+    ) -> some View {
+        RoundedRectangle(cornerRadius: 13, style: .continuous)
+            .fill(Color.black.opacity(0.035))
+            .frame(width: size, height: size)
+            .overlay(
+                Text(emoji)
+                    .font(.system(size: fontSize))
+            )
+    }
+
     private func statusActionButton(
         title: String,
         statusValue: String,
         currentStatus: String,
-        isProminent: Bool,
+        activeBackground: Color,
+        activeForeground: Color,
         action: @escaping () -> Void
     ) -> some View {
         let isActive = currentStatus.lowercased() == statusValue.lowercased()
@@ -366,41 +394,19 @@ struct OrdersView: View {
         return Button(action: action) {
             Text(title)
                 .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
-                .foregroundStyle(buttonForeground(isActive: isActive, isProminent: isProminent))
+                .foregroundStyle(isActive ? activeForeground : .black)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
                 .frame(maxWidth: .infinity)
-                .frame(height: 46)
-                .background(buttonBackground(isActive: isActive, isProminent: isProminent))
+                .frame(height: 48)
+                .background(isActive ? activeBackground : Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(buttonBorder(isActive: isActive, isProminent: isProminent), lineWidth: 1)
+                        .stroke(isActive ? activeBackground : Color.black.opacity(0.10), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
-    }
-
-    private func buttonForeground(isActive: Bool, isProminent: Bool) -> Color {
-        if isActive && isProminent {
-            return .black
-        }
-        if isActive {
-            return .white
-        }
-        return .black
-    }
-
-    private func buttonBackground(isActive: Bool, isProminent: Bool) -> Color {
-        if isActive {
-            return isProminent ? accentGreen : .black
-        }
-        return .white
-    }
-
-    private func buttonBorder(isActive: Bool, isProminent: Bool) -> Color {
-        if isActive {
-            return isProminent ? accentGreen : .black
-        }
-        return Color.black.opacity(0.08)
     }
 
     @ViewBuilder
@@ -414,8 +420,81 @@ struct OrdersView: View {
             .clipShape(Capsule())
     }
 
+    private var filteredOrders: [Order] {
+        switch selectedFilter {
+        case .today:
+            return viewModel.orders.filter { isTodayOrder($0) }
+        case .all:
+            return viewModel.orders
+        case .new:
+            return viewModel.orders.filter { $0.status.lowercased() == "new" }
+        case .ready:
+            return viewModel.orders.filter { $0.status.lowercased() == "ready" }
+        }
+    }
+
+    private var todayOrdersCount: Int {
+        viewModel.orders.filter { isTodayOrder($0) }.count
+    }
+
     private var newOrdersCount: Int {
         viewModel.orders.filter { $0.status.lowercased() == "new" }.count
+    }
+
+    private var readyOrdersCount: Int {
+        viewModel.orders.filter { $0.status.lowercased() == "ready" }.count
+    }
+
+    private var emptyStateTitle: String {
+        switch selectedFilter {
+        case .today:
+            return "Brak zamówień dzisiaj"
+        case .all:
+            return "Brak zamówień"
+        case .new:
+            return "Brak nowych zamówień"
+        case .ready:
+            return "Brak gotowych zamówień"
+        }
+    }
+
+    private var emptyStateSubtitle: String {
+        switch selectedFilter {
+        case .today:
+            return "Dzisiejsze zamówienia pojawią się tutaj automatycznie"
+        case .all:
+            return "Nowe zamówienia pojawią się tutaj automatycznie"
+        case .new:
+            return "Nowe zamówienia pojawią się tutaj, gdy klient złoży zamówienie"
+        case .ready:
+            return "Zamówienia oznaczone jako gotowe pojawią się tutaj"
+        }
+    }
+
+    private func isTodayOrder(_ order: Order) -> Bool {
+        guard let date = parseOrderDate(order.createdAt) else {
+            return false
+        }
+
+        return Calendar.current.isDateInToday(date)
+    }
+
+    private func parseOrderDate(_ raw: String) -> Date? {
+        let formatter1 = DateFormatter()
+        formatter1.locale = Locale(identifier: "en_US_POSIX")
+        formatter1.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX"
+
+        let formatter2 = DateFormatter()
+        formatter2.locale = Locale(identifier: "en_US_POSIX")
+        formatter2.dateFormat = "yyyy-MM-dd'T'HH:mm:ssXXXXX"
+
+        let formatter3 = DateFormatter()
+        formatter3.locale = Locale(identifier: "en_US_POSIX")
+        formatter3.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX"
+
+        return formatter1.date(from: raw)
+            ?? formatter2.date(from: raw)
+            ?? formatter3.date(from: raw)
     }
 
     private func displayFulfillmentType(_ type: String) -> String {
@@ -440,48 +519,40 @@ struct OrdersView: View {
     private func statusBackground(_ status: String) -> Color {
         switch status.lowercased() {
         case "new":
-            return accentBlue
+            return accentGreen.opacity(0.22)
         case "accepted":
-            return accentOrange.opacity(0.14)
+            return accentYellow.opacity(0.26)
         case "ready":
-            return accentGreen.opacity(0.18)
+            return accentOrange.opacity(0.18)
         case "done":
-            return Color.black.opacity(0.08)
+            return Color.black.opacity(0.06)
         default:
-            return Color.black.opacity(0.08)
+            return Color.black.opacity(0.06)
         }
     }
 
     private func statusForeground(_ status: String) -> Color {
         switch status.lowercased() {
         case "new":
-            return accentBlueText
-        case "accepted":
-            return accentOrange
-        case "ready":
             return accentGreenText
+        case "accepted":
+            return accentYellowText
+        case "ready":
+            return accentOrangeText
         case "done":
-            return Color.black.opacity(0.65)
+            return Color.black.opacity(0.62)
         default:
-            return Color.black.opacity(0.65)
+            return Color.black.opacity(0.62)
         }
     }
 
     private func formatHeaderDate(_ raw: String) -> String {
-        let formatter1 = DateFormatter()
-        formatter1.locale = Locale(identifier: "en_US_POSIX")
-        formatter1.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX"
-
-        let formatter2 = DateFormatter()
-        formatter2.locale = Locale(identifier: "en_US_POSIX")
-        formatter2.dateFormat = "yyyy-MM-dd'T'HH:mm:ssXXXXX"
-
         let output = DateFormatter()
         output.locale = Locale(identifier: "pl_PL")
         output.dateStyle = .medium
         output.timeStyle = .short
 
-        if let date = formatter1.date(from: raw) ?? formatter2.date(from: raw) {
+        if let date = parseOrderDate(raw) {
             return output.string(from: date)
         }
 
@@ -489,22 +560,22 @@ struct OrdersView: View {
     }
 }
 
-private struct UberCardModifier: ViewModifier {
+private struct LaMenuCardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.black.opacity(0.075), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.025), radius: 12, x: 0, y: 5)
     }
 }
 
 private extension View {
-    func uberCardStyle() -> some View {
-        modifier(UberCardModifier())
+    func laMenuCardStyle() -> some View {
+        modifier(LaMenuCardModifier())
     }
 }
 

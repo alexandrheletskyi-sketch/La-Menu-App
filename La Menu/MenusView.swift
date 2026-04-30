@@ -8,14 +8,20 @@ struct MenusView: View {
     @State private var selectedCategoryForNewItem: MenuCategory?
     @State private var editingItem: MenuItem?
     @State private var showPlansView = false
+    @State private var categoryPendingDeletion: MenuCategory?
 
-    private let pageBackground = Color(red: 0.965, green: 0.965, blue: 0.965)
+    private let pageBackground = Color.white
     private let softFill = Color.black.opacity(0.04)
+    private let softBorder = Color.black.opacity(0.07)
     private let mutedText = Color.black.opacity(0.58)
+    private let secondaryText = Color.black.opacity(0.42)
+
+    private let accentOrange = Color(red: 1.0, green: 95.0 / 255.0, blue: 43.0 / 255.0)
+    private let accentOrangeSoft = Color(red: 1.0, green: 95.0 / 255.0, blue: 43.0 / 255.0).opacity(0.14)
+    private let accentOrangeText = Color(red: 0.86, green: 0.26, blue: 0.04)
+
     private let accentGreen = Color(red: 99 / 255, green: 225 / 255, blue: 141 / 255)
     private let accentGreenText = Color(red: 0.22, green: 0.58, blue: 0.34)
-    private let accentBlue = Color(red: 0.86, green: 0.93, blue: 1.00)
-    private let accentBlueText = Color(red: 0.12, green: 0.52, blue: 0.96)
 
     var body: some View {
         NavigationStack {
@@ -37,9 +43,9 @@ struct MenusView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showAddCategorySheet) {
-                AddCategorySheet { name, description in
+                SimpleAddCategorySheet { name in
                     Task {
-                        await viewModel.addCategory(name: name, description: description)
+                        await viewModel.addCategory(name: name, description: "")
                     }
                 }
                 .presentationDetents([.medium])
@@ -111,6 +117,32 @@ struct MenusView: View {
                     )
                 }
             }
+            .alert(
+                "Usunąć kategorię?",
+                isPresented: Binding(
+                    get: { categoryPendingDeletion != nil },
+                    set: { newValue in
+                        if !newValue {
+                            categoryPendingDeletion = nil
+                        }
+                    }
+                )
+            ) {
+                Button("Anuluj", role: .cancel) {
+                    categoryPendingDeletion = nil
+                }
+
+                Button("Usuń", role: .destructive) {
+                    if let category = categoryPendingDeletion {
+                        Task {
+                            await viewModel.deleteCategory(category)
+                            categoryPendingDeletion = nil
+                        }
+                    }
+                }
+            } message: {
+                Text("Ta akcja usunie kategorię oraz wszystkie pozycje z tej kategorii")
+            }
         }
     }
 
@@ -135,6 +167,8 @@ struct MenusView: View {
             .padding(.top, 14)
             .padding(.bottom, 120)
         }
+        .background(Color.white)
+        .scrollContentBackground(.hidden)
         .task(id: profile.id) {
             await viewModel.load(profileID: profile.id)
         }
@@ -153,7 +187,7 @@ struct MenusView: View {
                 .font(.custom("WixMadeforDisplay-Regular", size: 17))
                 .foregroundStyle(mutedText)
                 .lineSpacing(2)
-                .frame(maxWidth: 330, alignment: .leading)
+                .frame(maxWidth: 340, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -161,8 +195,8 @@ struct MenusView: View {
                     summaryPill(
                         title: "Kategorie",
                         value: "\(viewModel.categories.count)",
-                        foreground: accentBlueText,
-                        background: accentBlue
+                        foreground: accentOrangeText,
+                        background: accentOrangeSoft
                     )
 
                     summaryPill(
@@ -175,8 +209,8 @@ struct MenusView: View {
                     summaryPill(
                         title: "Plan",
                         value: profile.subscriptionPlan.title,
-                        foreground: .black,
-                        background: Color.black.opacity(0.06)
+                        foreground: .black.opacity(0.62),
+                        background: Color.black.opacity(0.025)
                     )
 
                     if viewModel.isLoading {
@@ -190,7 +224,7 @@ struct MenusView: View {
                         .foregroundStyle(mutedText)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
-                        .background(Color.black.opacity(0.05))
+                        .background(Color.black.opacity(0.035))
                         .clipShape(Capsule())
                     }
                 }
@@ -209,8 +243,9 @@ struct MenusView: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 58)
-                .background(Color.black)
+                .background(accentOrange)
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .shadow(color: accentOrange.opacity(0.22), radius: 14, x: 0, y: 8)
             }
             .buttonStyle(.plain)
         }
@@ -225,7 +260,7 @@ struct MenusView: View {
                 .font(.custom("WixMadeforDisplay-SemiBold", size: 13))
         }
         .foregroundStyle(foreground)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 13)
         .padding(.vertical, 10)
         .background(background)
         .clipShape(Capsule())
@@ -275,12 +310,12 @@ struct MenusView: View {
     private var emptyStateCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(softFill)
+                .fill(accentOrangeSoft)
                 .frame(width: 52, height: 52)
                 .overlay(
                     Image(systemName: "list.bullet.rectangle")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(accentOrangeText)
                 )
 
             Text("Brak kategorii")
@@ -299,7 +334,7 @@ struct MenusView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(Color.black)
+                    .background(accentOrange)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
             .buttonStyle(.plain)
@@ -327,52 +362,69 @@ struct MenusView: View {
                     Text(category.name)
                         .font(.custom("WixMadeforDisplay-Bold", size: 28))
                         .foregroundStyle(.black)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    if let description = category.description, !description.isEmpty {
+                    if let description = category.description,
+                       !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text(description)
                             .font(.custom("WixMadeforDisplay-Regular", size: 15))
                             .foregroundStyle(mutedText)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(2)
                     }
                 }
 
                 Spacer(minLength: 12)
 
-                VStack(alignment: .trailing, spacing: 10) {
-                    Text("\(categoryItems.count)")
-                        .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
-                        .foregroundStyle(accentGreenText)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(accentGreen.opacity(0.18))
-                        .clipShape(Capsule())
+                Text("\(categoryItems.count)")
+                    .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
+                    .foregroundStyle(accentGreenText)
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 8)
+                    .background(accentGreen.opacity(0.18))
+                    .clipShape(Capsule())
+            }
 
-                    SwiftUI.Menu {
-                        Button {
-                            handleAddItemTapped(for: category)
-                        } label: {
-                            Label("Dodaj pozycję", systemImage: "plus")
-                        }
+            HStack(spacing: 10) {
+                Button {
+                    handleAddItemTapped(for: category)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .semibold))
 
-                        Button(role: .destructive) {
-                            Task {
-                                await viewModel.deleteCategory(category)
-                            }
-                        } label: {
-                            Label("Usuń kategorię", systemImage: "trash")
-                        }
-                    } label: {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(softFill)
-                            .frame(width: 42, height: 42)
-                            .overlay(
-                                Image(systemName: "ellipsis")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(.black)
-                            )
+                        Text("Dodaj pozycję")
+                            .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
                     }
-                    .buttonStyle(.plain)
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(Color.black.opacity(0.035))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.black.opacity(0.045), lineWidth: 1)
+                    )
                 }
+                .buttonStyle(.plain)
+
+                Button(role: .destructive) {
+                    categoryPendingDeletion = category
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 14, weight: .semibold))
+
+                        Text("Usuń")
+                            .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
+                    }
+                    .foregroundStyle(.red)
+                    .frame(width: 104)
+                    .frame(height: 48)
+                    .background(Color.red.opacity(0.075))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
             }
 
             Rectangle()
@@ -380,38 +432,7 @@ struct MenusView: View {
                 .frame(height: 1)
 
             if categoryItems.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Brak pozycji w tej kategorii")
-                        .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
-                        .foregroundStyle(.black)
-
-                    Text("Dodaj pierwszą pozycję, aby kategoria zaczęła wyglądać jak gotowe menu")
-                        .font(.custom("WixMadeforDisplay-Regular", size: 14))
-                        .foregroundStyle(mutedText)
-
-                    Button {
-                        handleAddItemTapped(for: category)
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 14, weight: .semibold))
-
-                            Text("Dodaj pozycję")
-                                .font(.custom("WixMadeforDisplay-SemiBold", size: 16))
-                        }
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 2)
-                }
+                emptyCategoryContent
             } else {
                 VStack(spacing: 12) {
                     ForEach(categoryItems) { item in
@@ -419,6 +440,7 @@ struct MenusView: View {
                             item: item,
                             softFill: softFill,
                             mutedText: mutedText,
+                            secondaryText: secondaryText,
                             accentGreen: accentGreen,
                             accentGreenText: accentGreenText,
                             onEdit: {
@@ -431,34 +453,24 @@ struct MenusView: View {
                             }
                         )
                     }
-
-                    Button {
-                        handleAddItemTapped(for: category)
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 14, weight: .semibold))
-
-                            Text("Dodaj pozycję")
-                                .font(.custom("WixMadeforDisplay-SemiBold", size: 16))
-                        }
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 2)
                 }
             }
         }
         .padding(20)
         .uberCardStyle()
+    }
+
+    private var emptyCategoryContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Brak pozycji w tej kategorii")
+                .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
+                .foregroundStyle(.black)
+
+            Text("Dodaj pierwszą pozycję, aby kategoria zaczęła wyglądać jak gotowe menu")
+                .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                .foregroundStyle(mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private var totalItemsCount: Int {
@@ -484,139 +496,306 @@ struct MenusView: View {
     }
 }
 
+private struct SimpleAddCategorySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+
+    let onSave: (String) -> Void
+
+    private let accentOrange = Color(red: 1.0, green: 95.0 / 255.0, blue: 43.0 / 255.0)
+    private let mutedText = Color.black.opacity(0.58)
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            Capsule()
+                .fill(Color.black.opacity(0.12))
+                .frame(width: 44, height: 5)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Nowa kategoria")
+                    .font(.custom("WixMadeforDisplay-Bold", size: 30))
+                    .foregroundStyle(.black)
+
+                Text("Wpisz nazwę kategorii, np. Pizza, Sushi albo Napoje")
+                    .font(.custom("WixMadeforDisplay-Regular", size: 15))
+                    .foregroundStyle(mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Nazwa kategorii")
+                    .font(.custom("WixMadeforDisplay-SemiBold", size: 14))
+                    .foregroundStyle(.black)
+
+                TextField("Np. Pizza", text: $name)
+                    .font(.custom("WixMadeforDisplay-Regular", size: 17))
+                    .textInputAutocapitalization(.words)
+                    .submitLabel(.done)
+                    .padding(.horizontal, 16)
+                    .frame(height: 56)
+                    .background(Color.black.opacity(0.035))
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+
+            Spacer()
+
+            Button {
+                let finalName = trimmedName
+
+                guard !finalName.isEmpty else {
+                    return
+                }
+
+                onSave(finalName)
+                dismiss()
+            } label: {
+                Text("Dodaj kategorię")
+                    .font(.custom("WixMadeforDisplay-SemiBold", size: 17))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(trimmedName.isEmpty ? Color.black.opacity(0.18) : accentOrange)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(trimmedName.isEmpty)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
+        .background(Color.white)
+    }
+}
+
 private struct MenuItemCard: View {
     let item: MenuItem
     let softFill: Color
     let mutedText: Color
+    let secondaryText: Color
     let accentGreen: Color
     let accentGreenText: Color
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    private var descriptionParts: [String] {
+        guard let description = item.description,
+              !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return []
+        }
+
+        return description
+            .split(separator: ",")
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private var shouldShowAsChips: Bool {
+        descriptionParts.count >= 2
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 itemImage
+                    .padding(.top, 2)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(item.name)
-                        .font(.custom("WixMadeforDisplay-Bold", size: 20))
-                        .foregroundStyle(.black)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Text(item.name)
+                            .font(.custom("WixMadeforDisplay-Bold", size: 20))
+                            .foregroundStyle(.black)
+                            .lineLimit(3)
+                            .minimumScaleFactor(0.86)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .layoutPriority(2)
 
-                    if let description = item.description, !description.isEmpty {
+                        pricePill
+                            .fixedSize()
+                            .layoutPriority(1)
+                    }
+
+                    if shouldShowAsChips {
+                        ingredientsChips
+                    } else if let description = item.description,
+                              !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text(description)
                             .font(.custom("WixMadeforDisplay-Regular", size: 14))
                             .foregroundStyle(mutedText)
+                            .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    if let weight = item.weight, !weight.isEmpty {
-                        Text(weight)
-                            .font(.custom("WixMadeforDisplay-Medium", size: 13))
-                            .foregroundStyle(mutedText)
-                    }
+                    HStack(alignment: .center, spacing: 8) {
+                        if let weight = item.weight,
+                           !weight.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            smallInfoPill(weight)
+                        }
 
-                    if let allergens = item.allergens, !allergens.isEmpty {
-                        Text("Alergeny: \(allergens.joined(separator: ", "))")
-                            .font(.custom("WixMadeforDisplay-Medium", size: 12))
-                            .foregroundStyle(mutedText)
+                        if !item.isAvailable {
+                            smallStatusPill("Niedostępne")
+                        }
+
+                        Spacer(minLength: 8)
+
+                        menuButton
                     }
+                    .padding(.top, 2)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
-                Spacer(minLength: 8)
+            if let allergens = item.allergens, !allergens.isEmpty {
+                Text("Alergeny: \(allergens.joined(separator: ", "))")
+                    .font(.custom("WixMadeforDisplay-Medium", size: 12))
+                    .foregroundStyle(secondaryText)
+                    .lineLimit(1)
+            }
+        }
+        .padding(14)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.black.opacity(0.055), lineWidth: 1)
+        )
+    }
 
-                VStack(alignment: .trailing, spacing: 10) {
-                    Text("\(Int(item.price)) zł")
-                        .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
-                        .foregroundStyle(accentGreenText)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(accentGreen.opacity(0.18))
+    private var pricePill: some View {
+        Text("\(Int(item.price)) zł")
+            .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
+            .foregroundStyle(accentGreenText)
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(accentGreen.opacity(0.18))
+            .clipShape(Capsule())
+    }
+
+    private var ingredientsChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(descriptionParts.prefix(8), id: \.self) { part in
+                    Text(part)
+                        .font(.custom("WixMadeforDisplay-Medium", size: 12))
+                        .foregroundStyle(mutedText)
+                        .lineLimit(1)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 6)
+                        .background(Color.black.opacity(0.035))
                         .clipShape(Capsule())
-
-                    if !item.isAvailable {
-                        Text("Niedostępne")
-                            .font(.custom("WixMadeforDisplay-Medium", size: 12))
-                            .foregroundStyle(.red)
-                    }
-
-                    SwiftUI.Menu {
-                        Button {
-                            onEdit()
-                        } label: {
-                            Label("Edytuj pozycję", systemImage: "pencil")
-                        }
-
-                        Button(role: .destructive) {
-                            onDelete()
-                        } label: {
-                            Label("Usuń pozycję", systemImage: "trash")
-                        }
-                    } label: {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(softFill)
-                            .frame(width: 38, height: 38)
-                            .overlay(
-                                Image(systemName: "ellipsis")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(.black)
-                            )
-                    }
-                    .buttonStyle(.plain)
                 }
             }
         }
-        .padding(16)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.black.opacity(0.06), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func smallInfoPill(_ text: String) -> some View {
+        Text(text)
+            .font(.custom("WixMadeforDisplay-Medium", size: 12))
+            .foregroundStyle(mutedText)
+            .lineLimit(1)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(Color.black.opacity(0.035))
+            .clipShape(Capsule())
+    }
+
+    private func smallStatusPill(_ text: String) -> some View {
+        Text(text)
+            .font(.custom("WixMadeforDisplay-Medium", size: 12))
+            .foregroundStyle(.red)
+            .lineLimit(1)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(Color.red.opacity(0.08))
+            .clipShape(Capsule())
+    }
+
+    private var menuButton: some View {
+        SwiftUI.Menu {
+            Button {
+                onEdit()
+            } label: {
+                Label("Edytuj pozycję", systemImage: "pencil")
+            }
+
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Usuń pozycję", systemImage: "trash")
+            }
+        } label: {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(softFill)
+                .frame(width: 38, height: 38)
+                .overlay(
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.black)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
     private var itemImage: some View {
-        if let imageURL = item.imageURL,
-           !imageURL.isEmpty,
-           let url = URL(string: imageURL) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty:
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color.black.opacity(0.04))
+        let imageSize: CGFloat = 74
+        let cornerRadius: CGFloat = 18
+
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(Color.black.opacity(0.04))
+
+            if let imageURL = item.imageURL,
+               !imageURL.isEmpty,
+               let url = URL(string: imageURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
                         ProgressView()
+
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: imageSize, height: imageSize)
+                            .clipped()
+
+                    case .failure:
+                        Image(systemName: "fork.knife")
+                            .font(.system(size: 23, weight: .semibold))
+                            .foregroundStyle(.black.opacity(0.65))
+
+                    @unknown default:
+                        Image(systemName: "fork.knife")
+                            .font(.system(size: 23, weight: .semibold))
+                            .foregroundStyle(.black.opacity(0.65))
                     }
-
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-
-                case .failure:
-                    placeholderImage
-
-                @unknown default:
-                    placeholderImage
                 }
+            } else {
+                Image(systemName: "fork.knife")
+                    .font(.system(size: 23, weight: .semibold))
+                    .foregroundStyle(.black.opacity(0.65))
             }
-            .frame(width: 82, height: 82)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        } else {
-            placeholderImage
-                .frame(width: 82, height: 82)
         }
+        .frame(width: imageSize, height: imageSize)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 
     private var placeholderImage: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.black.opacity(0.04))
 
             Image(systemName: "fork.knife")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.black.opacity(0.7))
+                .font(.system(size: 23, weight: .semibold))
+                .foregroundStyle(.black.opacity(0.65))
         }
     }
 }
@@ -625,12 +804,12 @@ private struct UberCardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.black.opacity(0.075), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.025), radius: 10, x: 0, y: 3)
     }
 }
 

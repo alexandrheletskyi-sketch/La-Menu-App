@@ -133,6 +133,11 @@ final class MenusViewModel {
         let cleanWeight = weight.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanAllergensText = allergensText.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        let allergens = cleanAllergensText
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
         guard !cleanName.isEmpty else { return }
 
         errorMessage = nil
@@ -145,21 +150,14 @@ final class MenusViewModel {
                 uploadedImageURL = nil
             }
 
-            let allergensArray: [String]? = cleanAllergensText.isEmpty
-                ? nil
-                : cleanAllergensText
-                    .split(separator: ",")
-                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                    .filter { !$0.isEmpty }
-
             struct InsertItem: Encodable {
                 let category_id: UUID
                 let name: String
                 let description: String?
                 let price: Double
                 let weight: String?
-                let image_url: String?
                 let allergens: [String]?
+                let image_url: String?
                 let is_available: Bool
                 let sort_order: Int
             }
@@ -172,8 +170,8 @@ final class MenusViewModel {
                 description: cleanDescription.isEmpty ? nil : cleanDescription,
                 price: price,
                 weight: cleanWeight.isEmpty ? nil : cleanWeight,
+                allergens: allergens.isEmpty ? nil : allergens,
                 image_url: uploadedImageURL,
-                allergens: allergensArray,
                 is_available: true,
                 sort_order: sortOrder
             )
@@ -195,6 +193,11 @@ final class MenusViewModel {
         let cleanWeight = draft.weight.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanAllergensText = draft.allergensText.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        let allergens = cleanAllergensText
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
         guard !cleanName.isEmpty else { return }
 
         errorMessage = nil
@@ -208,20 +211,13 @@ final class MenusViewModel {
                 finalImageURL = item.imageURL
             }
 
-            let allergensArray: [String]? = cleanAllergensText.isEmpty
-                ? nil
-                : cleanAllergensText
-                    .split(separator: ",")
-                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                    .filter { !$0.isEmpty }
-
             struct UpdateItem: Encodable {
                 let name: String
                 let description: String?
                 let price: Double
                 let weight: String?
-                let image_url: String?
                 let allergens: [String]?
+                let image_url: String?
             }
 
             let payload = UpdateItem(
@@ -229,8 +225,8 @@ final class MenusViewModel {
                 description: cleanDescription.isEmpty ? nil : cleanDescription,
                 price: draft.price,
                 weight: cleanWeight.isEmpty ? nil : cleanWeight,
-                image_url: finalImageURL,
-                allergens: allergensArray
+                allergens: allergens.isEmpty ? nil : allergens,
+                image_url: finalImageURL
             )
 
             try await SupabaseManager.shared
@@ -329,12 +325,5 @@ final class MenusViewModel {
             .getPublicURL(path: fileName)
 
         return publicURL.absoluteString
-    }
-
-    private func parseAllergens(from text: String) -> [String] {
-        text
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
     }
 }

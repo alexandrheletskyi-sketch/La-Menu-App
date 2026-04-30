@@ -411,7 +411,6 @@ struct OnboardingView: View {
         case .legalDetails:
             return draft.legalBusinessName.trimmed.count >= 2 &&
                    draft.businessDisplayName.trimmed.count >= 2 &&
-                   draft.nip.trimmed.count >= 10 &&
                    draft.addressLine1.trimmed.count >= 3 &&
                    draft.postalCode.trimmed.count >= 3 &&
                    draft.city.trimmed.count >= 2 &&
@@ -935,7 +934,7 @@ struct LegalDetailsStepView: View {
                 VStack(spacing: 14) {
                     LMInputField(title: "Pełna nazwa firmy", text: $legalBusinessName)
                     LMInputField(title: "Nazwa widoczna dla klientów", text: $businessDisplayName)
-                    LMInputField(title: "NIP", text: $nip, keyboard: .numberPad)
+                    LMInputField(title: "NIP opcjonalnie", text: $nip, keyboard: .numberPad)
                 }
             }
 
@@ -1353,7 +1352,7 @@ struct FinishStepView: View {
                 title: "Dane prawne",
                 rows: [
                     ("Firma", draft.legalBusinessName),
-                    ("NIP", draft.nip),
+                    ("NIP", draft.nip.trimmed.isEmpty ? "—" : draft.nip),
                     ("Adres", legalAddressSummary),
                     ("E-mail", draft.contactEmail),
                     ("Telefon", draft.contactPhone)

@@ -4,21 +4,25 @@ import PostgREST
 
 private struct VenueSlotSettingsInsertPayload: Encodable, Sendable {
     let profile_id: UUID
-    let slot_duration: Int
+    let slot_duration_minutes: Int
     let default_capacity: Int
     let days_ahead: Int
-    let lead_time_min: Int
+    let lead_time_minutes: Int
     let allow_asap: Bool
     let earliest_pickup_time_text: String?
 }
 
 private struct VenueSlotSettingsUpdatePayload: Encodable, Sendable {
-    let slot_duration: Int
+    let slot_duration_minutes: Int
     let default_capacity: Int
     let days_ahead: Int
-    let lead_time_min: Int
+    let lead_time_minutes: Int
     let allow_asap: Bool
     let earliest_pickup_time_text: String?
+}
+
+private struct ProfileSlotIntervalUpdatePayload: Encodable, Sendable {
+    let slot_interval_minutes: Int
 }
 
 private struct SlotDateOverrideUpsertPayload: Encodable, Sendable {
@@ -46,7 +50,7 @@ struct SlotManagementService {
     private let client = SupabaseManager.shared
 
     private let settingsSelect =
-        "profile_id, slot_duration, default_capacity, days_ahead, lead_time_min, allow_asap, earliest_pickup_time_text"
+        "profile_id, slot_duration_minutes, default_capacity, days_ahead, lead_time_minutes, allow_asap, earliest_pickup_time_text"
 
     private let dateOverrideSelect =
         "profile_id, override_date, fulfillment_type, is_closed, open_time, close_time, capacity_override, note, created_at, updated_at"
@@ -56,6 +60,7 @@ struct SlotManagementService {
 
     private var decoder: JSONDecoder {
         let decoder = JSONDecoder()
+
         decoder.dateDecodingStrategy = .custom { value in
             let container = try value.singleValueContainer()
             let raw = try container.decode(String.self)
@@ -76,12 +81,13 @@ struct SlotManagementService {
                 debugDescription: "Invalid date format: \(raw)"
             )
         }
+
         return decoder
     }
 
     func fetchSettings(profileId: UUID) async throws -> VenueSlotSettings {
-        print("DEBUG Service fetchSettings start")
-        print("DEBUG Service fetchSettings profileId:", profileId.uuidString)
+        debugHeader("SERVICE fetchSettings START")
+        debug("profileId", profileId.uuidString)
 
         do {
             let response = try await client
@@ -91,43 +97,44 @@ struct SlotManagementService {
                 .limit(1)
                 .execute()
 
-            debugPrintRawResponse(response.data, label: "fetchSettings select raw")
+            debugPrintRawResponse(response.data, label: "fetchSettings raw")
 
             if isEmptyJSONArrayOrNoData(response.data) {
-                print("DEBUG Service fetchSettings no existing settings -> insert default")
+                debug("fetchSettings", "no settings found -> inserting default")
                 return try await insertDefaultSettings(profileId: profileId)
             }
 
             let items = try decoder.decode([VenueSlotSettings].self, from: response.data)
 
             guard let first = items.first else {
-                print("DEBUG Service fetchSettings decoded empty array -> insert default")
+                debug("fetchSettings", "decoded empty array -> inserting default")
                 return try await insertDefaultSettings(profileId: profileId)
             }
 
-            print("DEBUG Service fetchSettings found existing settings:", first)
+            debug("fetchSettings success", first)
             return first
         } catch {
-            print("DEBUG Service fetchSettings ERROR:", error)
-            print("DEBUG Service fetchSettings ERROR description:", error.localizedDescription)
+            debugError("fetchSettings", error)
             throw error
         }
     }
 
     private func insertDefaultSettings(profileId: UUID) async throws -> VenueSlotSettings {
+        debugHeader("SERVICE insertDefaultSettings START")
+
         let fallback = VenueSlotSettings.placeholder(profileId: profileId)
 
         let payload = VenueSlotSettingsInsertPayload(
             profile_id: profileId,
-            slot_duration: fallback.slotDurationMinutes,
-            default_capacity: fallback.defaultCapacity,
-            days_ahead: fallback.daysAhead,
-            lead_time_min: fallback.leadTimeMinutes,
+            slot_duration_minutes: max(fallback.slotDurationMinutes, 5),
+            default_capacity: max(fallback.defaultCapacity, 1),
+            days_ahead: max(fallback.daysAhead, 1),
+            lead_time_minutes: max(fallback.leadTimeMinutes, 0),
             allow_asap: fallback.allowAsap,
             earliest_pickup_time_text: normalizedOptionalText(fallback.earliestPickupTimeText)
         )
 
-        print("DEBUG Service insertDefaultSettings payload:", payload)
+        debug("insertDefaultSettings payload", payload)
 
         do {
             let insertResponse = try await client
@@ -136,9 +143,13 @@ struct SlotManagementService {
                 .execute()
 
             debugPrintRawResponse(insertResponse.data, label: "insertDefaultSettings insert raw")
+
+            try await updateProfileSlotInterval(
+                profileId: profileId,
+                slotDurationMinutes: payload.slot_duration_minutes
+            )
         } catch {
-            print("DEBUG Service insertDefaultSettings insert ERROR:", error)
-            print("DEBUG Service insertDefaultSettings insert ERROR description:", error.localizedDescription)
+            debugError("insertDefaultSettings insert", error)
             throw error
         }
 
@@ -157,29 +168,34 @@ struct SlotManagementService {
             throw NSError(
                 domain: "SlotManagementService",
                 code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Nie udało się odczytać ustawień po zapisie"]
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Nie udało się odczytać ustawień po zapisie"
+                ]
             )
         }
 
-        print("DEBUG Service insertDefaultSettings success:", first)
+        debug("insertDefaultSettings success", first)
         return first
     }
 
     func updateSettings(_ settings: VenueSlotSettings) async throws {
+        debugHeader("SERVICE updateSettings START")
+
+        let normalizedSlotDuration = max(settings.slotDurationMinutes, 5)
+
         let payload = VenueSlotSettingsUpdatePayload(
-            slot_duration: max(settings.slotDurationMinutes, 5),
+            slot_duration_minutes: normalizedSlotDuration,
             default_capacity: max(settings.defaultCapacity, 1),
             days_ahead: max(settings.daysAhead, 1),
-            lead_time_min: max(settings.leadTimeMinutes, 0),
+            lead_time_minutes: max(settings.leadTimeMinutes, 0),
             allow_asap: settings.allowAsap,
             earliest_pickup_time_text: settings.allowAsap
                 ? normalizedOptionalText(settings.earliestPickupTimeText)
                 : nil
         )
 
-        print("DEBUG Service updateSettings start")
-        print("DEBUG Service updateSettings profileId:", settings.profileId.uuidString)
-        print("DEBUG Service updateSettings payload:", payload)
+        debug("profileId", settings.profileId.uuidString)
+        debug("payload", payload)
 
         do {
             let response = try await client
@@ -189,10 +205,43 @@ struct SlotManagementService {
                 .execute()
 
             debugPrintRawResponse(response.data, label: "updateSettings raw")
-            print("DEBUG Service updateSettings success")
+
+            try await updateProfileSlotInterval(
+                profileId: settings.profileId,
+                slotDurationMinutes: normalizedSlotDuration
+            )
+
+            debug("updateSettings", "success")
         } catch {
-            print("DEBUG Service updateSettings ERROR:", error)
-            print("DEBUG Service updateSettings ERROR description:", error.localizedDescription)
+            debugError("updateSettings", error)
+            throw error
+        }
+    }
+
+    func updateProfileSlotInterval(
+        profileId: UUID,
+        slotDurationMinutes: Int
+    ) async throws {
+        debugHeader("SERVICE updateProfileSlotInterval START")
+
+        let payload = ProfileSlotIntervalUpdatePayload(
+            slot_interval_minutes: max(slotDurationMinutes, 5)
+        )
+
+        debug("profileId", profileId.uuidString)
+        debug("payload", payload)
+
+        do {
+            let response = try await client
+                .from("profiles")
+                .update(payload)
+                .eq("id", value: profileId.uuidString)
+                .execute()
+
+            debugPrintRawResponse(response.data, label: "updateProfileSlotInterval raw")
+            debug("updateProfileSlotInterval", "success")
+        } catch {
+            debugError("updateProfileSlotInterval", error)
             throw error
         }
     }
@@ -203,15 +252,18 @@ struct SlotManagementService {
         fulfillmentType: SlotFulfillmentType,
         timezone: String = "Europe/Warsaw"
     ) async throws -> [AdminDaySlot] {
+        debugHeader("SERVICE fetchAdminDaySlots START")
+
+        let dateString = DateFormatter.yyyyMMdd.string(from: date)
+
         let params: [String: String] = [
             "p_profile_id": profileId.uuidString,
-            "p_target_date": DateFormatter.yyyyMMdd.string(from: date),
+            "p_target_date": dateString,
             "p_fulfillment_type": fulfillmentType.rawValue,
             "p_timezone": timezone
         ]
 
-        print("DEBUG Service fetchAdminDaySlots start")
-        print("DEBUG Service fetchAdminDaySlots params:", params)
+        debug("params", params)
 
         do {
             let response = try await client
@@ -221,16 +273,31 @@ struct SlotManagementService {
             debugPrintRawResponse(response.data, label: "get_day_slots_for_admin raw")
 
             if isEmptyJSONArrayOrNoData(response.data) {
-                print("DEBUG Service fetchAdminDaySlots empty data, returning []")
+                debug("fetchAdminDaySlots", "empty response -> []")
                 return []
             }
 
             let decoded = try decoder.decode([AdminDaySlot].self, from: response.data)
-            print("DEBUG Service fetchAdminDaySlots decoded count:", decoded.count)
+
+            debug("fetchAdminDaySlots decoded count", decoded.count)
+
+            for slot in decoded {
+                print("🕒 SLOT")
+                print("label: \(slot.slotLabel)")
+                print("startRaw: \(slot.slotStartRaw)")
+                print("isBlocked: \(slot.isBlocked)")
+                print("status: \(slot.status)")
+                print("statusTitle: \(slot.statusTitle)")
+                print("capacity: \(slot.capacity)")
+                print("taken: \(slot.taken)")
+                print("remaining: \(slot.remaining)")
+                print("hasCapacityOverride: \(slot.hasCapacityOverride)")
+                print("------------------------------")
+            }
+
             return decoded
         } catch {
-            print("DEBUG Service fetchAdminDaySlots ERROR:", error)
-            print("DEBUG Service fetchAdminDaySlots ERROR description:", error.localizedDescription)
+            debugError("fetchAdminDaySlots", error)
             throw error
         }
     }
@@ -240,12 +307,13 @@ struct SlotManagementService {
         date: Date,
         fulfillmentType: SlotFulfillmentType
     ) async throws -> SlotDateOverride? {
+        debugHeader("SERVICE fetchDateOverride START")
+
         let dateString = DateFormatter.yyyyMMdd.string(from: date)
 
-        print("DEBUG Service fetchDateOverride start")
-        print("DEBUG Service fetchDateOverride profileId:", profileId.uuidString)
-        print("DEBUG Service fetchDateOverride date:", dateString)
-        print("DEBUG Service fetchDateOverride fulfillmentType:", fulfillmentType.rawValue)
+        debug("profileId", profileId.uuidString)
+        debug("date", dateString)
+        debug("fulfillmentType", fulfillmentType.rawValue)
 
         do {
             let response = try await client
@@ -260,15 +328,16 @@ struct SlotManagementService {
             debugPrintRawResponse(response.data, label: "fetchDateOverride raw")
 
             if isEmptyJSONArrayOrNoData(response.data) {
+                debug("fetchDateOverride", "not found")
                 return nil
             }
 
             let items = try decoder.decode([SlotDateOverride].self, from: response.data)
-            print("DEBUG Service fetchDateOverride items count:", items.count)
+            debug("fetchDateOverride count", items.count)
+
             return items.first
         } catch {
-            print("DEBUG Service fetchDateOverride ERROR:", error)
-            print("DEBUG Service fetchDateOverride ERROR description:", error.localizedDescription)
+            debugError("fetchDateOverride", error)
             throw error
         }
     }
@@ -279,6 +348,8 @@ struct SlotManagementService {
         fulfillmentType: SlotFulfillmentType,
         draft: SlotDateOverrideDraft
     ) async throws {
+        debugHeader("SERVICE upsertDateOverride START")
+
         let payload = SlotDateOverrideUpsertPayload(
             profile_id: profileId,
             override_date: DateFormatter.yyyyMMdd.string(from: date),
@@ -286,12 +357,11 @@ struct SlotManagementService {
             is_closed: draft.isClosed,
             open_time: draft.isClosed ? nil : DateFormatter.hm24.string(from: draft.openDate),
             close_time: draft.isClosed ? nil : DateFormatter.hm24.string(from: draft.closeDate),
-            capacity_override: Int(draft.capacityOverride.trimmingCharacters(in: .whitespacesAndNewlines)),
+            capacity_override: normalizedPositiveInt(draft.capacityOverride),
             note: normalizedOptionalText(draft.note)
         )
 
-        print("DEBUG Service upsertDateOverride start")
-        print("DEBUG Service upsertDateOverride payload:", payload)
+        debug("payload", payload)
 
         do {
             let response = try await client
@@ -300,10 +370,9 @@ struct SlotManagementService {
                 .execute()
 
             debugPrintRawResponse(response.data, label: "upsertDateOverride raw")
-            print("DEBUG Service upsertDateOverride success")
+            debug("upsertDateOverride", "success")
         } catch {
-            print("DEBUG Service upsertDateOverride ERROR:", error)
-            print("DEBUG Service upsertDateOverride ERROR description:", error.localizedDescription)
+            debugError("upsertDateOverride", error)
             throw error
         }
     }
@@ -313,12 +382,13 @@ struct SlotManagementService {
         date: Date,
         fulfillmentType: SlotFulfillmentType
     ) async throws {
+        debugHeader("SERVICE deleteDateOverride START")
+
         let dateString = DateFormatter.yyyyMMdd.string(from: date)
 
-        print("DEBUG Service deleteDateOverride start")
-        print("DEBUG Service deleteDateOverride profileId:", profileId.uuidString)
-        print("DEBUG Service deleteDateOverride date:", dateString)
-        print("DEBUG Service deleteDateOverride fulfillmentType:", fulfillmentType.rawValue)
+        debug("profileId", profileId.uuidString)
+        debug("date", dateString)
+        debug("fulfillmentType", fulfillmentType.rawValue)
 
         do {
             let response = try await client
@@ -330,10 +400,9 @@ struct SlotManagementService {
                 .execute()
 
             debugPrintRawResponse(response.data, label: "deleteDateOverride raw")
-            print("DEBUG Service deleteDateOverride success")
+            debug("deleteDateOverride", "success")
         } catch {
-            print("DEBUG Service deleteDateOverride ERROR:", error)
-            print("DEBUG Service deleteDateOverride ERROR description:", error.localizedDescription)
+            debugError("deleteDateOverride", error)
             throw error
         }
     }
@@ -344,15 +413,18 @@ struct SlotManagementService {
         slotTime: String,
         fulfillmentType: SlotFulfillmentType
     ) async throws -> SlotTimeOverride? {
-        let dateString = DateFormatter.yyyyMMdd.string(from: date)
-        let normalizedTarget = normalizeTimeForCompare(slotTime)
+        debugHeader("SERVICE fetchSlotTimeOverride START")
 
-        print("DEBUG Service fetchSlotTimeOverride start")
-        print("DEBUG Service fetchSlotTimeOverride profileId:", profileId.uuidString)
-        print("DEBUG Service fetchSlotTimeOverride date:", dateString)
-        print("DEBUG Service fetchSlotTimeOverride slotTime:", slotTime)
-        print("DEBUG Service fetchSlotTimeOverride normalizedTarget:", normalizedTarget)
-        print("DEBUG Service fetchSlotTimeOverride fulfillmentType:", fulfillmentType.rawValue)
+        let dateString = DateFormatter.yyyyMMdd.string(from: date)
+        let normalizedTargetForCompare = normalizeTimeForCompare(slotTime)
+        let normalizedTargetForDatabase = normalizeSlotTimeForDatabase(slotTime)
+
+        debug("profileId", profileId.uuidString)
+        debug("date", dateString)
+        debug("fulfillmentType", fulfillmentType.rawValue)
+        debug("slotTime input", slotTime)
+        debug("normalizedTargetForCompare", normalizedTargetForCompare)
+        debug("normalizedTargetForDatabase", normalizedTargetForDatabase)
 
         do {
             let response = try await client
@@ -366,20 +438,36 @@ struct SlotManagementService {
             debugPrintRawResponse(response.data, label: "fetchSlotTimeOverride raw")
 
             if isEmptyJSONArrayOrNoData(response.data) {
+                debug("fetchSlotTimeOverride", "no rows")
                 return nil
             }
 
             let items = try decoder.decode([SlotTimeOverride].self, from: response.data)
 
-            let matched = items.first { item in
-                normalizeTimeForCompare(item.slotTime) == normalizedTarget
+            debug("fetchSlotTimeOverride rows count", items.count)
+
+            for item in items {
+                print("""
+                🔎 OVERRIDE ROW
+                slotTime DB: \(item.slotTime)
+                normalized DB: \(normalizeTimeForCompare(item.slotTime))
+                target: \(normalizedTargetForCompare)
+                isBlocked: \(item.isBlocked)
+                capacityOverride: \(String(describing: item.capacityOverride))
+                note: \(String(describing: item.note))
+                ------------------------------
+                """)
             }
 
-            print("DEBUG Service fetchSlotTimeOverride matched:", String(describing: matched))
+            let matched = items.first { item in
+                normalizeTimeForCompare(item.slotTime) == normalizedTargetForCompare
+            }
+
+            debug("fetchSlotTimeOverride matched", String(describing: matched))
+
             return matched
         } catch {
-            print("DEBUG Service fetchSlotTimeOverride ERROR:", error)
-            print("DEBUG Service fetchSlotTimeOverride ERROR description:", error.localizedDescription)
+            debugError("fetchSlotTimeOverride", error)
             throw error
         }
     }
@@ -391,15 +479,22 @@ struct SlotManagementService {
         slot: AdminDaySlot,
         blocked: Bool
     ) async throws {
+        debugHeader("SERVICE setSlotBlocked START")
+
         let dateString = DateFormatter.yyyyMMdd.string(from: date)
         let requestedSlotTime = slot.slotStartRaw
+        let normalizedSlotTime = normalizeSlotTimeForDatabase(requestedSlotTime)
 
-        print("DEBUG Service setSlotBlocked start")
-        print("DEBUG Service setSlotBlocked profileId:", profileId.uuidString)
-        print("DEBUG Service setSlotBlocked date:", dateString)
-        print("DEBUG Service setSlotBlocked fulfillmentType:", fulfillmentType.rawValue)
-        print("DEBUG Service setSlotBlocked requestedSlotTime:", requestedSlotTime)
-        print("DEBUG Service setSlotBlocked blocked:", blocked)
+        debug("profileId", profileId.uuidString)
+        debug("date", dateString)
+        debug("fulfillmentType", fulfillmentType.rawValue)
+        debug("slot.slotLabel", slot.slotLabel)
+        debug("slot.slotStartRaw", slot.slotStartRaw)
+        debug("requestedSlotTime", requestedSlotTime)
+        debug("normalizedSlotTime", normalizedSlotTime)
+        debug("blocked target", blocked)
+        debug("current slot.isBlocked", slot.isBlocked)
+        debug("current slot.status", "\(slot.status)")
 
         let existing = try await fetchSlotTimeOverride(
             profileId: profileId,
@@ -408,11 +503,12 @@ struct SlotManagementService {
             fulfillmentType: fulfillmentType
         )
 
-        print("DEBUG Service setSlotBlocked existing override:", String(describing: existing))
+        debug("existing override before change", String(describing: existing))
 
-        if !blocked {
+        if blocked == false {
             if let existing, existing.capacityOverride == nil {
-                print("DEBUG Service setSlotBlocked delete existing row using exact DB slot_time:", existing.slotTime)
+                debug("setSlotBlocked", "unblock -> deleting existing override row")
+                debug("delete slot_time exact", existing.slotTime)
 
                 do {
                     let response = try await client
@@ -420,22 +516,30 @@ struct SlotManagementService {
                         .delete()
                         .eq("profile_id", value: profileId.uuidString)
                         .eq("override_date", value: dateString)
-                        .eq("slot_time", value: existing.slotTime)
                         .eq("fulfillment_type", value: fulfillmentType.rawValue)
+                        .eq("slot_time", value: existing.slotTime)
                         .execute()
 
                     debugPrintRawResponse(response.data, label: "setSlotBlocked delete raw")
-                    print("DEBUG Service setSlotBlocked delete success")
+                    debug("setSlotBlocked delete", "success")
+
+                    let after = try await fetchSlotTimeOverride(
+                        profileId: profileId,
+                        date: date,
+                        slotTime: requestedSlotTime,
+                        fulfillmentType: fulfillmentType
+                    )
+
+                    debug("existing override after delete", String(describing: after))
                     return
                 } catch {
-                    print("DEBUG Service setSlotBlocked delete ERROR:", error)
-                    print("DEBUG Service setSlotBlocked delete ERROR description:", error.localizedDescription)
+                    debugError("setSlotBlocked delete", error)
                     throw error
                 }
             }
 
             if existing == nil {
-                print("DEBUG Service setSlotBlocked nothing to delete, override not found")
+                debug("setSlotBlocked", "unblock requested but override not found -> nothing to delete")
                 return
             }
         }
@@ -444,13 +548,13 @@ struct SlotManagementService {
             profile_id: profileId,
             override_date: dateString,
             fulfillment_type: fulfillmentType.rawValue,
-            slot_time: existing?.slotTime ?? normalizeSlotTimeForDatabase(requestedSlotTime),
+            slot_time: existing?.slotTime ?? normalizedSlotTime,
             is_blocked: blocked,
             capacity_override: existing?.capacityOverride,
             note: existing?.note
         )
 
-        print("DEBUG Service setSlotBlocked upsert payload:", payload)
+        debug("setSlotBlocked upsert payload", payload)
 
         do {
             let response = try await client
@@ -459,10 +563,18 @@ struct SlotManagementService {
                 .execute()
 
             debugPrintRawResponse(response.data, label: "setSlotBlocked upsert raw")
-            print("DEBUG Service setSlotBlocked upsert success")
+            debug("setSlotBlocked upsert", "success")
+
+            let after = try await fetchSlotTimeOverride(
+                profileId: profileId,
+                date: date,
+                slotTime: requestedSlotTime,
+                fulfillmentType: fulfillmentType
+            )
+
+            debug("existing override after upsert", String(describing: after))
         } catch {
-            print("DEBUG Service setSlotBlocked upsert ERROR:", error)
-            print("DEBUG Service setSlotBlocked upsert ERROR description:", error.localizedDescription)
+            debugError("setSlotBlocked upsert", error)
             throw error
         }
     }
@@ -474,15 +586,20 @@ struct SlotManagementService {
         slot: AdminDaySlot,
         capacity: Int?
     ) async throws {
+        debugHeader("SERVICE setSlotCapacityOverride START")
+
         let dateString = DateFormatter.yyyyMMdd.string(from: date)
         let requestedSlotTime = slot.slotStartRaw
+        let normalizedSlotTime = normalizeSlotTimeForDatabase(requestedSlotTime)
 
-        print("DEBUG Service setSlotCapacityOverride start")
-        print("DEBUG Service setSlotCapacityOverride profileId:", profileId.uuidString)
-        print("DEBUG Service setSlotCapacityOverride date:", dateString)
-        print("DEBUG Service setSlotCapacityOverride fulfillmentType:", fulfillmentType.rawValue)
-        print("DEBUG Service setSlotCapacityOverride requestedSlotTime:", requestedSlotTime)
-        print("DEBUG Service setSlotCapacityOverride capacity input:", String(describing: capacity))
+        debug("profileId", profileId.uuidString)
+        debug("date", dateString)
+        debug("fulfillmentType", fulfillmentType.rawValue)
+        debug("slot.slotLabel", slot.slotLabel)
+        debug("slot.slotStartRaw", slot.slotStartRaw)
+        debug("requestedSlotTime", requestedSlotTime)
+        debug("normalizedSlotTime", normalizedSlotTime)
+        debug("capacity input", String(describing: capacity))
 
         let existing = try await fetchSlotTimeOverride(
             profileId: profileId,
@@ -491,14 +608,16 @@ struct SlotManagementService {
             fulfillmentType: fulfillmentType
         )
 
-        print("DEBUG Service setSlotCapacityOverride existing override:", String(describing: existing))
+        debug("existing override before capacity change", String(describing: existing))
 
         let normalizedCapacity = capacity.map { max($0, 1) }
-        print("DEBUG Service setSlotCapacityOverride normalized capacity:", String(describing: normalizedCapacity))
+
+        debug("normalized capacity", String(describing: normalizedCapacity))
 
         if normalizedCapacity == nil, (existing?.isBlocked ?? false) == false {
             if let existing {
-                print("DEBUG Service setSlotCapacityOverride deleting existing row using exact DB slot_time:", existing.slotTime)
+                debug("setSlotCapacityOverride", "capacity nil and not blocked -> deleting row")
+                debug("delete slot_time exact", existing.slotTime)
 
                 do {
                     let response = try await client
@@ -506,20 +625,19 @@ struct SlotManagementService {
                         .delete()
                         .eq("profile_id", value: profileId.uuidString)
                         .eq("override_date", value: dateString)
-                        .eq("slot_time", value: existing.slotTime)
                         .eq("fulfillment_type", value: fulfillmentType.rawValue)
+                        .eq("slot_time", value: existing.slotTime)
                         .execute()
 
                     debugPrintRawResponse(response.data, label: "setSlotCapacityOverride delete raw")
-                    print("DEBUG Service setSlotCapacityOverride delete success")
+                    debug("setSlotCapacityOverride delete", "success")
                     return
                 } catch {
-                    print("DEBUG Service setSlotCapacityOverride delete ERROR:", error)
-                    print("DEBUG Service setSlotCapacityOverride delete ERROR description:", error.localizedDescription)
+                    debugError("setSlotCapacityOverride delete", error)
                     throw error
                 }
             } else {
-                print("DEBUG Service setSlotCapacityOverride no existing override to delete")
+                debug("setSlotCapacityOverride", "no existing override to delete")
                 return
             }
         }
@@ -528,13 +646,13 @@ struct SlotManagementService {
             profile_id: profileId,
             override_date: dateString,
             fulfillment_type: fulfillmentType.rawValue,
-            slot_time: existing?.slotTime ?? normalizeSlotTimeForDatabase(requestedSlotTime),
+            slot_time: existing?.slotTime ?? normalizedSlotTime,
             is_blocked: existing?.isBlocked ?? false,
             capacity_override: normalizedCapacity,
             note: existing?.note
         )
 
-        print("DEBUG Service setSlotCapacityOverride upsert payload:", payload)
+        debug("setSlotCapacityOverride upsert payload", payload)
 
         do {
             let response = try await client
@@ -543,10 +661,18 @@ struct SlotManagementService {
                 .execute()
 
             debugPrintRawResponse(response.data, label: "setSlotCapacityOverride upsert raw")
-            print("DEBUG Service setSlotCapacityOverride upsert success")
+            debug("setSlotCapacityOverride upsert", "success")
+
+            let after = try await fetchSlotTimeOverride(
+                profileId: profileId,
+                date: date,
+                slotTime: requestedSlotTime,
+                fulfillmentType: fulfillmentType
+            )
+
+            debug("existing override after capacity upsert", String(describing: after))
         } catch {
-            print("DEBUG Service setSlotCapacityOverride upsert ERROR:", error)
-            print("DEBUG Service setSlotCapacityOverride upsert ERROR description:", error.localizedDescription)
+            debugError("setSlotCapacityOverride upsert", error)
             throw error
         }
     }
@@ -557,17 +683,24 @@ struct SlotManagementService {
         if raw.count >= 19, raw.contains("T") {
             let start = raw.index(raw.startIndex, offsetBy: 11)
             let end = raw.index(start, offsetBy: 8)
-            return String(raw[start..<end])
+            let result = String(raw[start..<end])
+            debug("normalizeSlotTimeForDatabase ISO", "\(raw) -> \(result)")
+            return result
         }
 
         if raw.count >= 8, raw.filter({ $0 == ":" }).count >= 2 {
-            return String(raw.prefix(8))
+            let result = String(raw.prefix(8))
+            debug("normalizeSlotTimeForDatabase HH:mm:ss", "\(raw) -> \(result)")
+            return result
         }
 
         if raw.count >= 5, raw.contains(":") {
-            return String(raw.prefix(5)) + ":00"
+            let result = String(raw.prefix(5)) + ":00"
+            debug("normalizeSlotTimeForDatabase HH:mm", "\(raw) -> \(result)")
+            return result
         }
 
+        debug("normalizeSlotTimeForDatabase raw", raw)
         return raw
     }
 
@@ -596,6 +729,16 @@ struct SlotManagementService {
         return trimmed.isEmpty ? nil : trimmed
     }
 
+    private func normalizedPositiveInt(_ value: String) -> Int? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let intValue = Int(trimmed), intValue >= 1 else {
+            return nil
+        }
+
+        return intValue
+    }
+
     private func isEmptyJSONArrayOrNoData(_ data: Data) -> Bool {
         if data.isEmpty {
             return true
@@ -609,14 +752,38 @@ struct SlotManagementService {
 
     private func debugPrintRawResponse(_ data: Data, label: String) {
         if data.isEmpty {
-            print("DEBUG \(label): <empty>")
+            print("📦 DEBUG \(label): <empty>")
             return
         }
 
         if let raw = String(data: data, encoding: .utf8) {
-            print("DEBUG \(label):\n\(raw)")
+            print("""
+            📦 DEBUG \(label):
+            \(raw)
+            """)
         } else {
-            print("DEBUG \(label): <non-utf8 data, bytes=\(data.count)>")
+            print("📦 DEBUG \(label): <non-utf8 data, bytes=\(data.count)>")
         }
+    }
+
+    private func debugHeader(_ title: String) {
+        print("""
+        
+        🟧 ==============================
+        🟧 \(title)
+        🟧 ==============================
+        """)
+    }
+
+    private func debug(_ key: String, _ value: Any) {
+        print("🔸 DEBUG \(key): \(value)")
+    }
+
+    private func debugError(_ label: String, _ error: Error) {
+        print("""
+        ❌ DEBUG ERROR \(label)
+        error: \(error)
+        localizedDescription: \(error.localizedDescription)
+        """)
     }
 }

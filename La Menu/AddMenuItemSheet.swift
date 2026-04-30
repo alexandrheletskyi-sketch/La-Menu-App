@@ -109,6 +109,12 @@ struct AddMenuItemSheet: View {
                                     .font(.custom("WixMadeforDisplay-Medium", size: 16))
                             }
                         }
+
+                        if let imageData {
+                            Text("Rozmiar zdjęcia: \(formattedFileSize(imageData.count))")
+                                .font(.custom("WixMadeforDisplay-Regular", size: 12))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .padding(.vertical, 4)
                 }
@@ -127,11 +133,14 @@ struct AddMenuItemSheet: View {
 
                     TextField("Waga", text: $weight)
                         .font(.custom("WixMadeforDisplay-Regular", size: 16))
-                }
 
-                Section("Dodatkowe informacje") {
-                    TextField("Alergeny", text: $allergensText)
+                    TextField("Alergeny", text: $allergensText, axis: .vertical)
                         .font(.custom("WixMadeforDisplay-Regular", size: 16))
+                        .lineLimit(2...4)
+
+                    Text("Wpisz alergeny po przecinku, np. gluten, mleko, orzechy")
+                        .font(.custom("WixMadeforDisplay-Regular", size: 13))
+                        .foregroundStyle(.secondary)
                 }
 
                 if !isEditing, let limit = currentPlan.menuItemLimit {
@@ -177,17 +186,7 @@ struct AddMenuItemSheet: View {
                 populateIfNeeded()
             }
             .task(id: selectedPhotoItem) {
-                guard let selectedPhotoItem else { return }
-
-                do {
-                    if let data = try await selectedPhotoItem.loadTransferable(type: Data.self),
-                       let uiImage = UIImage(data: data) {
-                        selectedImage = uiImage
-                        imageData = uiImage.jpegData(compressionQuality: 0.82)
-                    }
-                } catch {
-                    print("Photo loading error:", error)
-                }
+                await loadSelectedPhoto()
             }
             .sheet(isPresented: $showPlansView) {
                 NavigationStack {
@@ -197,6 +196,30 @@ struct AddMenuItemSheet: View {
                     )
                 }
             }
+        }
+    }
+
+    private func loadSelectedPhoto() async {
+        guard let selectedPhotoItem else { return }
+
+        do {
+            guard let data = try await selectedPhotoItem.loadTransferable(type: Data.self),
+                  let uiImage = UIImage(data: data) else {
+                return
+            }
+
+            let optimizedImage = uiImage.optimizedForMenuImage(maxDimension: 1000)
+            let optimizedData = optimizedImage.jpegData(compressionQuality: 0.70)
+
+            await MainActor.run {
+                selectedImage = optimizedImage
+                imageData = optimizedData
+            }
+
+            print("Original image size:", formattedFileSize(data.count))
+            print("Optimized image size:", formattedFileSize(optimizedData?.count ?? 0))
+        } catch {
+            print("Photo loading error:", error)
         }
     }
 
@@ -240,9 +263,11 @@ struct AddMenuItemSheet: View {
                 Task {
                     do {
                         let (data, _) = try await URLSession.shared.data(from: url)
+
                         if let uiImage = UIImage(data: data) {
                             await MainActor.run {
                                 selectedImage = uiImage
+                                imageData = nil
                             }
                         }
                     } catch {
@@ -250,6 +275,58 @@ struct AddMenuItemSheet: View {
                     }
                 }
             }
+        }
+    }
+
+    private func formattedFileSize(_ bytes: Int) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useKB, .useMB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
+    }
+}
+
+private extension UIImage {
+    func optimizedForMenuImage(maxDimension: CGFloat) -> UIImage {
+        let normalizedImage = fixedOrientation()
+
+        let originalWidth = normalizedImage.size.width
+        let originalHeight = normalizedImage.size.height
+        let largestSide = max(originalWidth, originalHeight)
+
+        guard largestSide > maxDimension else {
+            return normalizedImage
+        }
+
+        let scale = maxDimension / largestSide
+
+        let newSize = CGSize(
+            width: originalWidth * scale,
+            height: originalHeight * scale
+        )
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+
+        let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
+
+        return renderer.image { _ in
+            normalizedImage.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+
+    func fixedOrientation() -> UIImage {
+        guard imageOrientation != .up else {
+            return self
+        }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+
+        return renderer.image { _ in
+            draw(in: CGRect(origin: .zero, size: size))
         }
     }
 }

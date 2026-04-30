@@ -2,14 +2,20 @@ import Foundation
 
 enum SubscriptionPlan: String, Codable, CaseIterable {
     case free
-    case business
     case plus
+    case business
+    case premium
 
     var title: String {
         switch self {
-        case .free: return "Free"
-        case .business: return "Business"
-        case .plus: return "Plus"
+        case .free:
+            return "Free"
+        case .plus:
+            return "Plus"
+        case .business:
+            return "Business"
+        case .premium:
+            return "Premium"
         }
     }
 
@@ -17,7 +23,7 @@ enum SubscriptionPlan: String, Codable, CaseIterable {
         switch self {
         case .free:
             return 20
-        case .business, .plus:
+        case .plus, .business, .premium:
             return nil
         }
     }
@@ -26,10 +32,38 @@ enum SubscriptionPlan: String, Codable, CaseIterable {
         switch self {
         case .free:
             return 20
-        case .business:
-            return 200
         case .plus:
-            return 700
+            return 200
+        case .business:
+            return 500
+        case .premium:
+            return 1500
+        }
+    }
+
+    var monthlyPrice: Decimal {
+        switch self {
+        case .free:
+            return 0
+        case .plus:
+            return 29.99
+        case .business:
+            return 49.99
+        case .premium:
+            return 99.99
+        }
+    }
+
+    var priceText: String {
+        switch self {
+        case .free:
+            return "$0"
+        case .plus:
+            return "$29.99"
+        case .business:
+            return "$49.99"
+        case .premium:
+            return "$99.99"
         }
     }
 
@@ -37,28 +71,31 @@ enum SubscriptionPlan: String, Codable, CaseIterable {
         switch self {
         case .free:
             return "Do 20 pozycji w menu"
-        case .business, .plus:
+        case .plus, .business, .premium:
             return "Nielimitowane menu"
         }
     }
 
     var smsCreditsText: String {
-        "\(smsCreditsIncluded) SMS kredytów"
+        "\(smsCreditsIncluded) SMS"
     }
 
     var shortDescription: String {
         switch self {
         case .free:
             return "Dla startu i małych lokali"
-        case .business:
-            return "Dla lokali, które chcą rosnąć"
         case .plus:
-            return "Najwięcej SMS i pełna swoboda"
+            return "Nielimitowane menu i pakiet 200 SMS"
+        case .business:
+            return "Dla lokali z większą liczbą zamówień"
+        case .premium:
+            return "Najwyższy pakiet dla najbardziej aktywnych lokali"
         }
     }
 
     static func from(_ rawValue: String?) -> SubscriptionPlan {
-        guard let rawValue, let plan = SubscriptionPlan(rawValue: rawValue.lowercased()) else {
+        guard let rawValue,
+              let plan = SubscriptionPlan(rawValue: rawValue.lowercased()) else {
             return .free
         }
         return plan

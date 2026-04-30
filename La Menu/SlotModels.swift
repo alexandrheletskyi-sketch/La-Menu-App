@@ -27,10 +27,10 @@ struct VenueSlotSettings: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case profileId = "profile_id"
-        case slotDurationMinutes = "slot_duration"
+        case slotDurationMinutes = "slot_duration_minutes"
         case defaultCapacity = "default_capacity"
         case daysAhead = "days_ahead"
-        case leadTimeMinutes = "lead_time_min"
+        case leadTimeMinutes = "lead_time_minutes"
         case allowAsap = "allow_asap"
         case earliestPickupTimeText = "earliest_pickup_time_text"
     }

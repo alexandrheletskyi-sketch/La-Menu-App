@@ -1,12 +1,20 @@
 import SwiftUI
+import CoreImage.CIFilterBuiltins
+import UIKit
+import Photos
 
 struct ProfileView: View {
     @Environment(AuthViewModel.self) private var auth
 
     @State private var showEditProfile = false
     @State private var showSlotManagement = false
+    @State private var showAllergensManagement = false
     @State private var showDeleteAccountAlert = false
     @State private var isDeletingAccount = false
+
+    @State private var qrSaveAlertTitle = ""
+    @State private var qrSaveAlertMessage = ""
+    @State private var showQRSaveAlert = false
 
     private let pageBackground = Color.white
     private let softFill = Color.black.opacity(0.04)
@@ -30,13 +38,33 @@ struct ProfileView: View {
         if let username = auth.profile?.username, !username.isEmpty {
             return "lamenu.pl/\(username)"
         }
+
         return "Link nie został jeszcze ustawiony"
+    }
+
+    private var publicMenuURLText: String? {
+        guard let username = auth.profile?.username.trimmingCharacters(in: .whitespacesAndNewlines),
+              !username.isEmpty else {
+            return nil
+        }
+
+        return "https://lamenu.pl/\(username)"
+    }
+
+    private var publicMenuDisplayText: String {
+        guard let username = auth.profile?.username.trimmingCharacters(in: .whitespacesAndNewlines),
+              !username.isEmpty else {
+            return "lamenu.pl"
+        }
+
+        return "lamenu.pl/\(username)"
     }
 
     private var addressText: String {
         if let address = auth.profile?.address, !address.isEmpty {
             return address
         }
+
         return "Adres nie został jeszcze uzupełniony"
     }
 
@@ -44,6 +72,7 @@ struct ProfileView: View {
         if let phone = auth.profile?.phone, !phone.isEmpty {
             return phone
         }
+
         return "Telefon nie został jeszcze uzupełniony"
     }
 
@@ -56,6 +85,7 @@ struct ProfileView: View {
               !raw.isEmpty else {
             return nil
         }
+
         return URL(string: raw)
     }
 
@@ -99,12 +129,18 @@ struct ProfileView: View {
                         headerSection
                         smsCard
                         profileCard
+                        qrCodeCard
                         toolsCard
                         signOutCard
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 14)
                     .padding(.bottom, 120)
+                }
+                .alert(qrSaveAlertTitle, isPresented: $showQRSaveAlert) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text(qrSaveAlertMessage)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -115,6 +151,11 @@ struct ProfileView: View {
             .navigationDestination(isPresented: $showSlotManagement) {
                 if let profileId {
                     SlotManagementView(profileId: profileId)
+                }
+            }
+            .navigationDestination(isPresented: $showAllergensManagement) {
+                if let profileId {
+                    AllergensManagementView(profileId: profileId)
                 }
             }
             .alert("Usunąć profil?", isPresented: $showDeleteAccountAlert) {
@@ -303,6 +344,116 @@ struct ProfileView: View {
         .profileCardStyle()
     }
 
+    private var qrCodeCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .center, spacing: 12) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(accentOrange.opacity(0.14))
+                    .frame(width: 52, height: 52)
+                    .overlay(
+                        Image(systemName: "qrcode")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(accentOrange)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Kod QR menu")
+                        .font(.custom("WixMadeforDisplay-Bold", size: 22))
+                        .foregroundStyle(.black)
+
+                    Text("Wydrukuj lub pokaż klientom kod prowadzący bezpośrednio do menu online")
+                        .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                        .foregroundStyle(mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+            }
+
+            if let publicMenuURLText {
+                VStack(spacing: 16) {
+                    VStack(spacing: 14) {
+                        Text("MENU")
+                            .font(.custom("WixMadeforDisplay-Bold", size: 42))
+                            .foregroundStyle(.white)
+                            .tracking(1)
+
+                        Text("Zeskanuj i odwiedź stronę")
+                            .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
+                            .foregroundStyle(.white.opacity(0.92))
+                            .multilineTextAlignment(.center)
+
+                        QRCodeView(text: publicMenuURLText)
+                            .frame(width: 220, height: 220)
+                            .padding(18)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+
+                        Text(publicMenuDisplayText)
+                            .font(.custom("WixMadeforDisplay-Bold", size: 18))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 26)
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                accentOrange,
+                                Color(red: 1.0, green: 112 / 255, blue: 38 / 255)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+
+                    Text(publicMenuURLText)
+                        .font(.custom("WixMadeforDisplay-Medium", size: 14))
+                        .foregroundStyle(mutedText)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+
+                    Button {
+                        downloadQRCodeImage()
+                    } label: {
+                        actionButton(
+                            icon: "square.and.arrow.down",
+                            title: "Pobierz kod QR",
+                            foreground: .white,
+                            background: Color.black
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Brak linku publicznego")
+                        .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
+                        .foregroundStyle(.black)
+
+                    Text("Ustaw nazwę linku publicznego w profilu, aby wygenerować kod QR")
+                        .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                        .foregroundStyle(mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(Color.black.opacity(0.03))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+        }
+        .padding(20)
+        .profileCardStyle()
+    }
+
     @ViewBuilder
     private var profileLogoView: some View {
         if let logoURL {
@@ -310,12 +461,15 @@ struct ProfileView: View {
                 switch phase {
                 case .empty:
                     logoPlaceholder
+
                 case .success(let image):
                     image
                         .resizable()
                         .scaledToFill()
+
                 case .failure:
                     logoPlaceholder
+
                 @unknown default:
                     logoPlaceholder
                 }
@@ -406,6 +560,18 @@ struct ProfileView: View {
                     action: {
                         if profileId != nil {
                             showSlotManagement = true
+                        }
+                    }
+                )
+
+                toolRow(
+                    icon: "list.bullet.rectangle.portrait",
+                    title: "Tabela alergenów",
+                    subtitle: "Dodaj własną tabelę alergenów, która później będzie widoczna przy pozycjach menu",
+                    isEnabled: profileId != nil,
+                    action: {
+                        if profileId != nil {
+                            showAllergensManagement = true
                         }
                     }
                 )
@@ -550,6 +716,139 @@ struct ProfileView: View {
         .frame(height: 54)
         .background(background)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    @MainActor
+    private func downloadQRCodeImage() {
+        guard let publicMenuURLText else {
+            showQRSaveResult(
+                title: "Brak linku",
+                message: "Najpierw ustaw link publiczny, aby wygenerować kod QR"
+            )
+            return
+        }
+
+        let qrOnlyView = QRCodeView(text: publicMenuURLText)
+            .frame(width: 900, height: 900)
+            .padding(60)
+            .background(Color.white)
+
+        let renderer = ImageRenderer(content: qrOnlyView)
+        renderer.scale = UIScreen.main.scale
+        renderer.proposedSize = ProposedViewSize(width: 1020, height: 1020)
+
+        guard let image = renderer.uiImage else {
+            showQRSaveResult(
+                title: "Błąd",
+                message: "Nie udało się wygenerować kodu QR"
+            )
+            return
+        }
+
+        saveImageToPhotos(image)
+    }
+
+    private func saveImageToPhotos(_ image: UIImage) {
+        let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+
+        switch status {
+        case .authorized, .limited:
+            performSaveImageToPhotos(image)
+
+        case .notDetermined:
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { newStatus in
+                DispatchQueue.main.async {
+                    if newStatus == .authorized || newStatus == .limited {
+                        performSaveImageToPhotos(image)
+                    } else {
+                        showQRSaveResult(
+                            title: "Brak dostępu",
+                            message: "Aby zapisać kod QR w galerii, zezwól aplikacji na dodawanie zdjęć"
+                        )
+                    }
+                }
+            }
+
+        case .denied, .restricted:
+            showQRSaveResult(
+                title: "Brak dostępu",
+                message: "Aplikacja nie ma dostępu do zapisywania zdjęć. Zmień to w ustawieniach iPhone’a"
+            )
+
+        @unknown default:
+            showQRSaveResult(
+                title: "Błąd",
+                message: "Nie udało się uzyskać dostępu do galerii"
+            )
+        }
+    }
+
+    private func performSaveImageToPhotos(_ image: UIImage) {
+        PHPhotoLibrary.shared().performChanges {
+            PHAssetChangeRequest.creationRequestForAsset(from: image)
+        } completionHandler: { success, error in
+            DispatchQueue.main.async {
+                if success {
+                    showQRSaveResult(
+                        title: "Zapisano",
+                        message: "Kod QR został zapisany w galerii zdjęć"
+                    )
+                } else {
+                    showQRSaveResult(
+                        title: "Błąd",
+                        message: error?.localizedDescription ?? "Nie udało się zapisać kodu QR w galerii"
+                    )
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func showQRSaveResult(title: String, message: String) {
+        qrSaveAlertTitle = title
+        qrSaveAlertMessage = message
+        showQRSaveAlert = true
+    }
+}
+
+struct QRCodeView: View {
+    let text: String
+
+    private let context = CIContext()
+    private let filter = CIFilter.qrCodeGenerator()
+
+    var body: some View {
+        if let image = generateQRCode(from: text) {
+            Image(uiImage: image)
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+        } else {
+            Image(systemName: "qrcode")
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(.black.opacity(0.35))
+                .padding(40)
+        }
+    }
+
+    private func generateQRCode(from string: String) -> UIImage? {
+        let data = Data(string.utf8)
+
+        filter.setValue(data, forKey: "inputMessage")
+        filter.setValue("H", forKey: "inputCorrectionLevel")
+
+        guard let outputImage = filter.outputImage else {
+            return nil
+        }
+
+        let scaledImage = outputImage.transformed(by: CGAffineTransform(scaleX: 12, y: 12))
+
+        guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else {
+            return nil
+        }
+
+        return UIImage(cgImage: cgImage)
     }
 }
 

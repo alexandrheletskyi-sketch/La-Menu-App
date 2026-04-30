@@ -8,14 +8,35 @@ struct HomeDashboardView: View {
     @State private var viewModel = HomeDashboardViewModel()
     @State private var showCopyToast = false
     @State private var showPlansView = false
+    @State private var dashboardOrderFilter: DashboardOrderFilter = .today
 
     private let pageBackground = Color.white
     private let cardBackground = Color.white
     private let softBorder = Color.black.opacity(0.075)
     private let mutedText = Color.black.opacity(0.58)
     private let secondaryText = Color.black.opacity(0.42)
+
     private let accentOrange = Color(red: 1.0, green: 95.0 / 255.0, blue: 43.0 / 255.0)
     private let accentGreen = Color(red: 99.0 / 255.0, green: 225.0 / 255.0, blue: 141.0 / 255.0)
+    private let accentYellow = Color(red: 1.0, green: 0.82, blue: 0.25)
+
+    private let accentGreenText = Color(red: 0.12, green: 0.45, blue: 0.24)
+    private let accentYellowText = Color(red: 0.55, green: 0.36, blue: 0.02)
+    private let accentOrangeText = Color(red: 0.72, green: 0.30, blue: 0.02)
+
+    enum DashboardOrderFilter: String, CaseIterable {
+        case today
+        case all
+
+        var title: String {
+            switch self {
+            case .today:
+                return "Dzisiaj"
+            case .all:
+                return "Wszystkie"
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -25,7 +46,7 @@ struct HomeDashboardView: View {
 
                 ScrollView(showsIndicators: false) {
                     Group {
-                        if viewModel.isLoading {
+                        if viewModel.isLoading && viewModel.profile == nil {
                             ProgressView("Ładowanie...")
                                 .font(.custom("WixMadeforDisplay-Regular", size: 16))
                                 .tint(.black)
@@ -90,7 +111,8 @@ struct HomeDashboardView: View {
             ordersSettingsSection(profile: profile)
 
             VStack(alignment: .leading, spacing: 14) {
-                sectionHeader("Ostatnie zamówienia")
+                sectionHeader("Zamówienia")
+                dashboardOrderFiltersSection
                 recentOrdersSection
             }
 
@@ -196,13 +218,7 @@ struct HomeDashboardView: View {
                     )
             }
             .padding(18)
-            .background(cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(softBorder, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 2)
+            .premiumCardStyle()
         }
         .buttonStyle(.plain)
     }
@@ -294,55 +310,68 @@ struct HomeDashboardView: View {
     }
 
     private var statsSection: some View {
-        HStack(spacing: 12) {
-            statCard(
+        HStack(spacing: 0) {
+            androidStyleMetricBlock(
+                emoji: "🛒",
                 title: "Zamówienia",
-                value: "\(viewModel.ordersTodayCount)",
-                icon: "cart"
+                value: "\(viewModel.ordersTodayCount)"
             )
 
-            statCard(
+            Rectangle()
+                .fill(Color.black.opacity(0.07))
+                .frame(width: 1, height: 82)
+                .padding(.horizontal, 10)
+
+            androidStyleMetricBlock(
+                emoji: "💵",
                 title: "Przychód",
-                value: "\(Int(viewModel.revenueToday)) zł",
-                icon: "banknote"
+                value: "\(Int(viewModel.revenueToday)) zł"
             )
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.black.opacity(0.075), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.025), radius: 10, x: 0, y: 3)
     }
 
-    private func statCard(title: String, value: String, icon: String) -> some View {
+    private func androidStyleMetricBlock(
+        emoji: String,
+        title: String,
+        value: String
+    ) -> some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.black.opacity(0.035))
-                    .frame(width: 44, height: 44)
+            HStack(alignment: .center, spacing: 12) {
+                Text(emoji)
+                    .font(.system(size: 21))
+                    .frame(width: 46, height: 46)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .overlay(
-                        Image(systemName: icon)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(title == "Przychód" ? accentOrange : .black)
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.black.opacity(0.055), lineWidth: 1)
                     )
+                    .shadow(color: .black.opacity(0.035), radius: 8, x: 0, y: 3)
 
-                Spacer()
-
-                Text("DZISIAJ")
-                    .font(.custom("WixMadeforDisplay-Medium", size: 11))
-                    .foregroundStyle(secondaryText)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.custom("WixMadeforDisplay-Regular", size: 16))
+                    .font(.custom("WixMadeforDisplay-Regular", size: 17))
                     .foregroundStyle(mutedText)
-
-                Text(value)
-                    .font(.custom("WixMadeforDisplay-Bold", size: 35))
-                    .foregroundStyle(.black)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.72)
+                    .minimumScaleFactor(0.82)
             }
+
+            Text(value)
+                .font(.custom("WixMadeforDisplay-Bold", size: 38))
+                .foregroundStyle(.black)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .premiumCardStyle()
     }
 
     private func ordersSettingsSection(profile: Profile) -> some View {
@@ -421,16 +450,61 @@ struct HomeDashboardView: View {
         .premiumCardStyle()
     }
 
+    private var dashboardOrderFiltersSection: some View {
+        HStack(spacing: 10) {
+            dashboardOrderFilterPill(
+                filter: .today,
+                value: todayDashboardOrdersCount
+            )
+
+            dashboardOrderFilterPill(
+                filter: .all,
+                value: dashboardOrders.count
+            )
+        }
+    }
+
+    private func dashboardOrderFilterPill(
+        filter: DashboardOrderFilter,
+        value: Int
+    ) -> some View {
+        let isActive = dashboardOrderFilter == filter
+        let activeBackground: Color = filter == .today ? accentOrange.opacity(0.22) : Color.black
+        let activeForeground: Color = filter == .today ? accentOrangeText : .white
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                dashboardOrderFilter = filter
+            }
+        } label: {
+            HStack(spacing: 7) {
+                Text(filter.title)
+                    .font(.custom("WixMadeforDisplay-Medium", size: 13))
+
+                Text("\(value)")
+                    .font(.custom("WixMadeforDisplay-SemiBold", size: 13))
+            }
+            .foregroundStyle(isActive ? activeForeground : .black.opacity(0.72))
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .background(isActive ? activeBackground : Color.black.opacity(0.035))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
     private var recentOrdersSection: some View {
         VStack(spacing: 14) {
-            if viewModel.recentOrders.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Brak zamówień")
-                        .font(.custom("WixMadeforDisplay-SemiBold", size: 19))
+            if filteredDashboardOrders.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    emojiBubble("🧾", size: 52, fontSize: 23)
+
+                    Text(dashboardEmptyTitle)
+                        .font(.custom("WixMadeforDisplay-SemiBold", size: 22))
                         .foregroundStyle(.black)
 
-                    Text("Nowe zamówienia pojawią się tutaj automatycznie")
-                        .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                    Text(dashboardEmptySubtitle)
+                        .font(.custom("WixMadeforDisplay-Regular", size: 15))
                         .foregroundStyle(mutedText)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -438,96 +512,266 @@ struct HomeDashboardView: View {
                 .premiumCardStyle()
 
             } else {
-                ForEach(viewModel.recentOrders) { order in
-                    VStack(alignment: .leading, spacing: 18) {
-                        HStack(alignment: .top, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Nowe zamówienie")
-                                    .font(.custom("WixMadeforDisplay-Bold", size: 22))
-                                    .foregroundStyle(.black)
-
-                                Text(order.fulfillmentType == "pickup" ? "Odbiór osobisty" : "Dostawa")
-                                    .font(.custom("WixMadeforDisplay-Regular", size: 14))
-                                    .foregroundStyle(mutedText)
-                            }
-
-                            Spacer()
-
-                            Text("\(Int(order.totalAmount)) zł")
-                                .font(.custom("WixMadeforDisplay-SemiBold", size: 14))
-                                .foregroundStyle(accentOrange)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(accentOrange.opacity(0.12))
-                                .clipShape(Capsule())
-                        }
-
-                        Rectangle()
-                            .fill(Color.black.opacity(0.06))
-                            .frame(height: 1)
-
-                        VStack(spacing: 14) {
-                            orderDetailRow(
-                                icon: "bag",
-                                title: "Produkty",
-                                value: viewModel.itemsText(for: order)
-                            )
-
-                            orderDetailRow(
-                                icon: order.fulfillmentType == "pickup" ? "storefront" : "car",
-                                title: "Sposób odbioru",
-                                value: order.fulfillmentType == "pickup" ? "Odbiór osobisty" : "Dostawa"
-                            )
-
-                            if let pickupTime = order.pickupTime {
-                                orderDetailRow(
-                                    icon: "clock",
-                                    title: "Godzina odbioru",
-                                    value: pickupTime
-                                )
-                            }
-
-                            if let phone = order.customerPhone {
-                                orderDetailRow(
-                                    icon: "phone",
-                                    title: "Telefon",
-                                    value: phone
-                                )
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .premiumCardStyle()
+                ForEach(filteredDashboardOrders) { order in
+                    dashboardOrderCard(order)
                 }
             }
         }
     }
 
-    private func orderDetailRow(icon: String, title: String, value: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.black.opacity(0.04))
-                .frame(width: 36, height: 36)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 15, weight: .semibold))
+    private func dashboardOrderCard(_ order: Order) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(order.customerName?.isEmpty == false ? order.customerName! : "Bez imienia")
+                        .font(.custom("WixMadeforDisplay-Bold", size: 27))
                         .foregroundStyle(.black)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+
+                    Text(displayFulfillmentType(order.fulfillmentType))
+                        .font(.custom("WixMadeforDisplay-Regular", size: 15))
+                        .foregroundStyle(mutedText)
+
+                    Text(formatOrderDate(order.createdAt))
+                        .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                        .foregroundStyle(secondaryText)
+                }
+
+                Spacer(minLength: 12)
+
+                VStack(alignment: .trailing, spacing: 10) {
+                    Text("\(Int(order.totalAmount)) zł")
+                        .font(.custom("WixMadeforDisplay-Bold", size: 16))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 9)
+                        .background(Color.black.opacity(0.045))
+                        .clipShape(Capsule())
+
+                    dashboardStatusBadge(order.status)
+                }
+            }
+
+            Divider()
+                .background(Color.black.opacity(0.06))
+
+            VStack(spacing: 15) {
+                let itemsText = viewModel.itemsText(for: order)
+
+                if !itemsText.isEmpty {
+                    dashboardOrderDetailRow(
+                        emoji: "🛒",
+                        title: "Produkty",
+                        value: itemsText
+                    )
+                }
+
+                if let phone = order.customerPhone, !phone.isEmpty {
+                    dashboardOrderDetailRow(
+                        emoji: "📞",
+                        title: "Telefon",
+                        value: phone
+                    )
+                }
+
+                dashboardOrderDetailRow(
+                    emoji: order.fulfillmentType == "pickup" ? "🏪" : "🚗",
+                    title: "Sposób odbioru",
+                    value: displayFulfillmentType(order.fulfillmentType)
                 )
+
+                if let pickupTime = order.pickupTime, !pickupTime.isEmpty {
+                    dashboardOrderDetailRow(
+                        emoji: "⏰",
+                        title: "Godzina odbioru",
+                        value: pickupTime
+                    )
+                }
+            }
+
+            Divider()
+                .background(Color.black.opacity(0.06))
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Zmień status")
+                    .font(.custom("WixMadeforDisplay-Medium", size: 14))
+                    .foregroundStyle(mutedText)
+
+                HStack(spacing: 10) {
+                    dashboardStatusActionButton(
+                        title: "Nowe",
+                        statusValue: "new",
+                        currentStatus: order.status,
+                        activeBackground: accentGreen,
+                        activeForeground: .black
+                    ) {
+                        Task {
+                            await updateDashboardOrderStatus(
+                                orderID: order.id,
+                                status: "new"
+                            )
+                        }
+                    }
+
+                    dashboardStatusActionButton(
+                        title: "Przyjęte",
+                        statusValue: "accepted",
+                        currentStatus: order.status,
+                        activeBackground: accentYellow,
+                        activeForeground: .black
+                    ) {
+                        Task {
+                            await updateDashboardOrderStatus(
+                                orderID: order.id,
+                                status: "accepted"
+                            )
+                        }
+                    }
+
+                    dashboardStatusActionButton(
+                        title: "Gotowe",
+                        statusValue: "ready",
+                        currentStatus: order.status,
+                        activeBackground: accentOrange,
+                        activeForeground: .black
+                    ) {
+                        Task {
+                            await updateDashboardOrderStatus(
+                                orderID: order.id,
+                                status: "ready"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .premiumCardStyle()
+    }
+
+    private func dashboardStatusActionButton(
+        title: String,
+        statusValue: String,
+        currentStatus: String,
+        activeBackground: Color,
+        activeForeground: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        let isActive = currentStatus.lowercased() == statusValue.lowercased()
+
+        return Button(action: action) {
+            Text(title)
+                .font(.custom("WixMadeforDisplay-SemiBold", size: 15))
+                .foregroundStyle(isActive ? activeForeground : .black)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(isActive ? activeBackground : Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(isActive ? activeBackground : Color.black.opacity(0.10), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func dashboardOrderDetailRow(
+        emoji: String,
+        title: String,
+        value: String
+    ) -> some View {
+        HStack(alignment: .top, spacing: 13) {
+            emojiBubble(emoji)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.custom("WixMadeforDisplay-Medium", size: 13))
-                    .foregroundStyle(secondaryText)
+                    .foregroundStyle(mutedText)
 
                 Text(value)
-                    .font(.custom("WixMadeforDisplay-SemiBold", size: 17))
+                    .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
                     .foregroundStyle(.black)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 0)
         }
+    }
+
+    private func emojiBubble(
+        _ emoji: String,
+        size: CGFloat = 38,
+        fontSize: CGFloat = 18
+    ) -> some View {
+        RoundedRectangle(cornerRadius: 13, style: .continuous)
+            .fill(Color.white)
+            .frame(width: size, height: size)
+            .overlay(
+                Text(emoji)
+                    .font(.system(size: fontSize))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .stroke(Color.black.opacity(0.055), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.025), radius: 6, x: 0, y: 2)
+    }
+
+    @ViewBuilder
+    private func dashboardStatusBadge(_ status: String) -> some View {
+        Text(displayStatus(status))
+            .font(.custom("WixMadeforDisplay-SemiBold", size: 12))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(statusBackground(status))
+            .foregroundStyle(statusForeground(status))
+            .clipShape(Capsule())
+    }
+
+    private var dashboardOrders: [Order] {
+        viewModel.recentOrders
+    }
+
+    private var filteredDashboardOrders: [Order] {
+        switch dashboardOrderFilter {
+        case .today:
+            return dashboardOrders.filter { isTodayOrder($0) }
+
+        case .all:
+            return dashboardOrders
+        }
+    }
+
+    private var todayDashboardOrdersCount: Int {
+        dashboardOrders.filter { isTodayOrder($0) }.count
+    }
+
+    private var dashboardEmptyTitle: String {
+        switch dashboardOrderFilter {
+        case .today:
+            return "Brak zamówień dzisiaj"
+
+        case .all:
+            return "Brak zamówień"
+        }
+    }
+
+    private var dashboardEmptySubtitle: String {
+        switch dashboardOrderFilter {
+        case .today:
+            return "Dzisiejsze zamówienia pojawią się tutaj automatycznie"
+
+        case .all:
+            return "Zamówienia pojawią się tutaj automatycznie"
+        }
+    }
+
+    private func updateDashboardOrderStatus(orderID: UUID, status: String) async {
+        await viewModel.updateStatus(orderID: orderID, status: status)
     }
 
     private var seeAllButton: some View {
@@ -581,6 +825,94 @@ struct HomeDashboardView: View {
                 showCopyToast = false
             }
         }
+    }
+
+    private func isTodayOrder(_ order: Order) -> Bool {
+        guard let date = parseOrderDate(order.createdAt) else {
+            return false
+        }
+
+        return Calendar.current.isDateInToday(date)
+    }
+
+    private func displayFulfillmentType(_ type: String) -> String {
+        type.lowercased() == "pickup" ? "Odbiór osobisty" : "Dostawa"
+    }
+
+    private func displayStatus(_ status: String) -> String {
+        switch status.lowercased() {
+        case "new":
+            return "Nowe"
+        case "accepted":
+            return "Przyjęte"
+        case "ready":
+            return "Gotowe"
+        case "done":
+            return "Zakończone"
+        default:
+            return status
+        }
+    }
+
+    private func statusBackground(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "new":
+            return accentGreen.opacity(0.22)
+        case "accepted":
+            return accentYellow.opacity(0.26)
+        case "ready":
+            return accentOrange.opacity(0.18)
+        case "done":
+            return Color.black.opacity(0.06)
+        default:
+            return Color.black.opacity(0.06)
+        }
+    }
+
+    private func statusForeground(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "new":
+            return accentGreenText
+        case "accepted":
+            return accentYellowText
+        case "ready":
+            return accentOrangeText
+        case "done":
+            return Color.black.opacity(0.62)
+        default:
+            return Color.black.opacity(0.62)
+        }
+    }
+
+    private func parseOrderDate(_ raw: String) -> Date? {
+        let formatter1 = DateFormatter()
+        formatter1.locale = Locale(identifier: "en_US_POSIX")
+        formatter1.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX"
+
+        let formatter2 = DateFormatter()
+        formatter2.locale = Locale(identifier: "en_US_POSIX")
+        formatter2.dateFormat = "yyyy-MM-dd'T'HH:mm:ssXXXXX"
+
+        let formatter3 = DateFormatter()
+        formatter3.locale = Locale(identifier: "en_US_POSIX")
+        formatter3.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX"
+
+        return formatter1.date(from: raw)
+            ?? formatter2.date(from: raw)
+            ?? formatter3.date(from: raw)
+    }
+
+    private func formatOrderDate(_ raw: String) -> String {
+        let output = DateFormatter()
+        output.locale = Locale(identifier: "pl_PL")
+        output.dateStyle = .medium
+        output.timeStyle = .short
+
+        if let date = parseOrderDate(raw) {
+            return output.string(from: date)
+        }
+
+        return raw
     }
 }
 

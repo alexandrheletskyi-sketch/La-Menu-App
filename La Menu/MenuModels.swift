@@ -7,8 +7,8 @@ struct MenuItem: Codable, Identifiable, Hashable {
     let description: String?
     let price: Double
     let weight: String?
-    let imageURL: String?
     let allergens: [String]?
+    let imageURL: String?
     let isAvailable: Bool
     let sortOrder: Int
     let createdAt: Date?
@@ -21,8 +21,8 @@ struct MenuItem: Codable, Identifiable, Hashable {
         case description
         case price
         case weight
-        case imageURL = "image_url"
         case allergens
+        case imageURL = "image_url"
         case isAvailable = "is_available"
         case sortOrder = "sort_order"
         case createdAt = "created_at"

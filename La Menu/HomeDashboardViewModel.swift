@@ -103,9 +103,14 @@ final class HomeDashboardViewModel {
 
             self.ordersTodayCount = todayOrders.count
             self.revenueToday = todayOrders.reduce(0) { $0 + $1.totalAmount }
-            self.recentOrders = Array(allOrders.prefix(5))
 
-            let orderIds = recentOrders.map { $0.id.uuidString }
+            // Тут залишаємо всі замовлення, бо HomeDashboardView сам фільтрує:
+            // - сьогоднішні
+            // - всі
+            // - приховує ready/done з дашборду
+            self.recentOrders = allOrders
+
+            let orderIds = allOrders.map { $0.id.uuidString }
 
             if !orderIds.isEmpty {
                 let allItems: [OrderItem] = try await SupabaseManager.shared
@@ -124,6 +129,27 @@ final class HomeDashboardViewModel {
             // jeśli ręczne przyjmowanie jest włączone, pokazujemy lokal jako aktywny
             // później możesz tu wstawić realne wyliczenie na podstawie godzin pracy
             self.isWithinWorkingHours = true
+
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func updateStatus(orderID: UUID, status: String) async {
+        struct OrderStatusUpdatePayload: Encodable {
+            let status: String
+        }
+
+        do {
+            try await SupabaseManager.shared
+                .from("orders")
+                .update(OrderStatusUpdatePayload(status: status))
+                .eq("id", value: orderID.uuidString)
+                .execute()
+
+            if let index = recentOrders.firstIndex(where: { $0.id == orderID }) {
+                recentOrders[index].status = status
+            }
 
         } catch {
             errorMessage = error.localizedDescription

@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Aplikacja zapisuje kod QR menu w galerii zdjęć, aby można było go wydrukować lub udostępnić klientom.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -22,6 +20,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>The app uses your location to help set the venue address and support delivery order features</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Aplikacja zapisuje kod QR menu w galerii zdjęć, aby można było go wydrukować lub udostępnić klientom.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>WixMadeforDisplay-Regular.ttf</string>

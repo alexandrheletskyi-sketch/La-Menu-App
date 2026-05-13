@@ -2,6 +2,29 @@ import SwiftUI
 import PhotosUI
 import UIKit
 
+private enum OnboardingText {
+    static func t(_ key: String) -> String {
+        String(localized: String.LocalizationValue(key))
+    }
+
+    static let step = "onboarding.step"
+    static let of = "onboarding.of"
+
+    static let back = "onboarding.button.back"
+    static let next = "onboarding.button.next"
+    static let createPanel = "onboarding.button.create_panel"
+    static let creating = "onboarding.button.creating"
+
+    static let yes = "common.yes"
+    static let no = "common.no"
+    static let enabled = "common.enabled"
+    static let disabled = "common.disabled"
+    static let emptyDash = "common.empty_dash"
+    static let optional = "common.optional"
+    static let minutesShort = "common.minutes_short"
+    static let currencyPln = "common.currency_pln"
+}
+
 struct OnboardingView: View {
     @Environment(AuthViewModel.self) private var auth
 
@@ -10,6 +33,7 @@ struct OnboardingView: View {
 
     @State private var firstItemPhoto: PhotosPickerItem?
     @State private var firstItemImageData: Data?
+
     @State private var isSubmittingFinish = false
 
     private let pageBackground = Color.white
@@ -22,6 +46,15 @@ struct OnboardingView: View {
 
     private var accentSoft: Color {
         Color(lmHex: draft.accentColorHex).opacity(0.14)
+    }
+    
+    private var publicDomain: String {
+        switch draft.publicCountry {
+        case "uk":
+            return "lamenu.uk"
+        default:
+            return "lamenu.pl"
+        }
     }
 
     private var step: OnboardingStep {
@@ -39,7 +72,17 @@ struct OnboardingView: View {
             get: { auth.onboardingDraft.username },
             set: { newValue in
                 auth.updateUsernameDraft(newValue)
-                log("username changed -> \(newValue)")
+                log("username changed -> raw: '\(newValue)' | slugified: '\(newValue.slugified)'")
+            }
+        )
+    }
+
+    private var nipBinding: Binding<String> {
+        Binding(
+            get: { auth.onboardingDraft.nip },
+            set: { newValue in
+                auth.onboardingDraft.nip = newValue
+                log("NIP changed -> raw: '\(newValue)' | trimmed: '\(newValue.trimmed)' | isEmpty: \(newValue.trimmed.isEmpty)")
             }
         )
     }
@@ -74,45 +117,66 @@ struct OnboardingView: View {
         .background(Color.white)
         .task(id: logoPhoto) {
             guard let logoPhoto else { return }
+
             log("loading logo photo")
-            logoImageData = try? await logoPhoto.loadTransferable(type: Data.self)
-            log("logo photo loaded -> \(logoImageData != nil)")
+
+            do {
+                logoImageData = try await logoPhoto.loadTransferable(type: Data.self)
+                log("logo photo loaded -> \(logoImageData != nil) | bytes: \(logoImageData?.count ?? 0)")
+            } catch {
+                log("logo photo loading failed -> \(error.localizedDescription)")
+            }
         }
         .task(id: firstItemPhoto) {
             guard let firstItemPhoto else { return }
+
             log("loading first item photo")
-            firstItemImageData = try? await firstItemPhoto.loadTransferable(type: Data.self)
-            log("first item photo loaded -> \(firstItemImageData != nil)")
+
+            do {
+                firstItemImageData = try await firstItemPhoto.loadTransferable(type: Data.self)
+                log("first item photo loaded -> \(firstItemImageData != nil) | bytes: \(firstItemImageData?.count ?? 0)")
+            } catch {
+                log("first item photo loading failed -> \(error.localizedDescription)")
+            }
         }
         .onAppear {
             log("onAppear")
-            logDraftState(prefix: "initial draft")
+            logDraftState(prefix: "initial draft onAppear")
 
             if logoImageData == nil {
                 logoImageData = draft.logoImageData
-                log("restored logoImageData from draft -> \(logoImageData != nil)")
+                log("restored logoImageData from draft -> \(logoImageData != nil) | bytes: \(logoImageData?.count ?? 0)")
             }
 
             if firstItemImageData == nil {
                 firstItemImageData = draft.firstItemImageData
-                log("restored firstItemImageData from draft -> \(firstItemImageData != nil)")
+                log("restored firstItemImageData from draft -> \(firstItemImageData != nil) | bytes: \(firstItemImageData?.count ?? 0)")
             }
         }
-        .onChange(of: step) { _, newStep in
-            log("step changed -> \(newStep.rawValue) \(newStep.title)")
+        .onChange(of: step) { oldStep, newStep in
+            log("step changed -> old: \(oldStep.rawValue) \(oldStep.title) | new: \(newStep.rawValue) \(newStep.title)")
+            logDraftState(prefix: "draft after step change")
         }
         .onChange(of: auth.errorMessage) { _, newValue in
             if let newValue, !newValue.isEmpty {
                 log("auth.errorMessage -> \(newValue)")
+            } else {
+                log("auth.errorMessage cleared")
             }
         }
         .onChange(of: auth.noticeMessage) { _, newValue in
             if let newValue, !newValue.isEmpty {
                 log("auth.noticeMessage -> \(newValue)")
+            } else {
+                log("auth.noticeMessage cleared")
             }
         }
         .onChange(of: auth.isLoading) { _, newValue in
             log("auth.isLoading -> \(newValue)")
+        }
+        .onChange(of: auth.profile != nil) { _, newValue in
+            log("auth.profile exists changed -> \(newValue)")
+            log("auth.profile id -> \(auth.profile?.id.uuidString ?? "nil")")
         }
     }
 
@@ -124,12 +188,12 @@ struct OnboardingView: View {
                     .foregroundStyle(.black.opacity(0.42))
                     .tracking(0.2)
 
-                Text(step.title)
+                Text(stepTitle)
                     .font(.wix(32, wixWeight: .bold))
                     .foregroundStyle(.black)
                     .tracking(-0.7)
 
-                Text(step.subtitle)
+                Text(stepSubtitle)
                     .font(.wix(15, wixWeight: .regular))
                     .foregroundStyle(mutedText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -145,7 +209,7 @@ struct OnboardingView: View {
                 }
 
                 HStack {
-                    Text("Krok \(step.rawValue + 1) z \(OnboardingStep.allCases.count)")
+                    Text("\(OnboardingText.t(OnboardingText.step)) \(step.rawValue + 1) \(OnboardingText.t(OnboardingText.of)) \(OnboardingStep.allCases.count)")
                         .font(.wix(13, wixWeight: .medium))
                         .foregroundStyle(secondaryText)
 
@@ -167,23 +231,69 @@ struct OnboardingView: View {
     private var stepEyebrow: String {
         switch step {
         case .basicInfo:
-            return "Konfiguracja lokalu"
+            return OnboardingText.t("onboarding.eyebrow.basic_info")
         case .publicLink:
-            return "Link publiczny"
+            return OnboardingText.t("onboarding.eyebrow.public_link")
         case .brandColor:
-            return "Wygląd marki"
+            return OnboardingText.t("onboarding.eyebrow.brand_color")
         case .legalDetails:
-            return "Dokumenty i polityki"
+            return OnboardingText.t("onboarding.eyebrow.legal_details")
         case .fulfillment:
-            return "Ustawienia sprzedaży"
+            return OnboardingText.t("onboarding.eyebrow.fulfillment")
         case .openingHours:
-            return "Godziny otwarcia"
+            return OnboardingText.t("onboarding.eyebrow.opening_hours")
         case .orderSettings:
-            return "Przyjmowanie zamówień"
+            return OnboardingText.t("onboarding.eyebrow.order_settings")
         case .firstMenu:
-            return "Pierwsza kategoria i pozycja"
+            return OnboardingText.t("onboarding.eyebrow.first_menu")
         case .finish:
-            return "Gotowe do startu"
+            return OnboardingText.t("onboarding.eyebrow.finish")
+        }
+    }
+
+    private var stepTitle: String {
+        switch step {
+        case .basicInfo:
+            return OnboardingText.t("onboarding.step.basic_info.title")
+        case .publicLink:
+            return OnboardingText.t("onboarding.step.public_link.title")
+        case .brandColor:
+            return OnboardingText.t("onboarding.step.brand_color.title")
+        case .legalDetails:
+            return OnboardingText.t("onboarding.step.legal_details.title")
+        case .fulfillment:
+            return OnboardingText.t("onboarding.step.fulfillment.title")
+        case .openingHours:
+            return OnboardingText.t("onboarding.step.opening_hours.title")
+        case .orderSettings:
+            return OnboardingText.t("onboarding.step.order_settings.title")
+        case .firstMenu:
+            return OnboardingText.t("onboarding.step.first_menu.title")
+        case .finish:
+            return OnboardingText.t("onboarding.step.finish.title")
+        }
+    }
+
+    private var stepSubtitle: String {
+        switch step {
+        case .basicInfo:
+            return OnboardingText.t("onboarding.step.basic_info.subtitle")
+        case .publicLink:
+            return OnboardingText.t("onboarding.step.public_link.subtitle")
+        case .brandColor:
+            return OnboardingText.t("onboarding.step.brand_color.subtitle")
+        case .legalDetails:
+            return OnboardingText.t("onboarding.step.legal_details.subtitle")
+        case .fulfillment:
+            return OnboardingText.t("onboarding.step.fulfillment.subtitle")
+        case .openingHours:
+            return OnboardingText.t("onboarding.step.opening_hours.subtitle")
+        case .orderSettings:
+            return OnboardingText.t("onboarding.step.order_settings.subtitle")
+        case .firstMenu:
+            return OnboardingText.t("onboarding.step.first_menu.subtitle")
+        case .finish:
+            return OnboardingText.t("onboarding.step.finish.subtitle")
         }
     }
 
@@ -208,6 +318,7 @@ struct OnboardingView: View {
         case .publicLink:
             PublicLinkStepView(
                 username: usernameBinding,
+                domain: publicDomain,
                 accentSoft: accentSoft,
                 validationState: auth.usernameValidationState,
                 isBusy: auth.isLoading,
@@ -220,14 +331,17 @@ struct OnboardingView: View {
 
         case .brandColor:
             BrandColorStepView(
-                accentColorHex: binding(\.accentColorHex)
+                accentColorHex: binding(\.accentColorHex),
+                publicCountry: binding(\.publicCountry),
+                publicLanguage: binding(\.publicLanguage),
+                publicCurrency: binding(\.publicCurrency)
             )
 
         case .legalDetails:
             LegalDetailsStepView(
                 legalBusinessName: binding(\.legalBusinessName),
                 businessDisplayName: binding(\.businessDisplayName),
-                nip: binding(\.nip),
+                nip: nipBinding,
                 addressLine1: binding(\.addressLine1),
                 addressLine2: binding(\.addressLine2),
                 postalCode: binding(\.postalCode),
@@ -278,6 +392,7 @@ struct OnboardingView: View {
         case .finish:
             FinishStepView(
                 draft: draft,
+                publicDomain: publicDomain,
                 logoImageData: logoImageData
             )
         }
@@ -304,12 +419,13 @@ struct OnboardingView: View {
             HStack(spacing: 12) {
                 if step.rawValue > 0 {
                     Button {
-                        log("back tapped from step \(step.rawValue)")
+                        log("back tapped from step \(step.rawValue) \(step.title)")
+
                         withAnimation(.easeInOut(duration: 0.22)) {
                             step = OnboardingStep(rawValue: step.rawValue - 1) ?? .basicInfo
                         }
                     } label: {
-                        Text("Wstecz")
+                        Text(OnboardingText.t(OnboardingText.back))
                             .font(.wix(16, wixWeight: .semiBold))
                             .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)
@@ -331,19 +447,28 @@ struct OnboardingView: View {
                         return
                     }
 
-                    log("primary button tapped at step \(step.rawValue) \(step.title)")
+                    log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    log("PRIMARY BUTTON TAPPED")
+                    log("step -> \(step.rawValue) \(step.title)")
+                    log("button title -> \(primaryButtonTitle)")
                     log("isCurrentStepValid -> \(isCurrentStepValid)")
+                    log("auth.isLoading -> \(auth.isLoading)")
+                    log("isSubmittingFinish -> \(isSubmittingFinish)")
+                    log("NIP at button tap -> raw: '\(draft.nip)' | trimmed: '\(draft.nip.trimmed)' | isEmpty: \(draft.nip.trimmed.isEmpty)")
+                    logValidationStateForCurrentStep()
+                    logDraftState(prefix: "draft at primary button tap")
+                    log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
                     Task {
                         if step == .finish {
                             isSubmittingFinish = true
-                            log("finish submission started")
+                            log("finish submission started from final button")
                         }
 
                         await nextAction()
 
                         isSubmittingFinish = false
-                        log("finish submission ended")
+                        log("finish submission ended from final button")
                     }
                 } label: {
                     HStack(spacing: 8) {
@@ -387,9 +512,11 @@ struct OnboardingView: View {
 
     private var primaryButtonTitle: String {
         if step == .finish {
-            return auth.isLoading ? "Tworzenie..." : "Utwórz panel"
+            return auth.isLoading
+            ? OnboardingText.t(OnboardingText.creating)
+            : OnboardingText.t(OnboardingText.createPanel)
         } else {
-            return "Dalej"
+            return OnboardingText.t(OnboardingText.next)
         }
     }
 
@@ -406,7 +533,10 @@ struct OnboardingView: View {
 
         case .brandColor:
             return draft.accentColorHex.trimmed.hasPrefix("#") &&
-                   draft.accentColorHex.trimmed.count == 7
+                   draft.accentColorHex.trimmed.count == 7 &&
+                   ["pl", "uk"].contains(draft.publicCountry) &&
+                   ["pl", "en"].contains(draft.publicLanguage) &&
+                   ["PLN", "EUR", "USD", "GBP", "CAD", "UAH"].contains(draft.publicCurrency)
 
         case .legalDetails:
             return draft.legalBusinessName.trimmed.count >= 2 &&
@@ -440,7 +570,7 @@ struct OnboardingView: View {
             return true
         }
     }
-
+    
     private func nextAction() async {
         log("nextAction started for step \(step.rawValue) \(step.title)")
 
@@ -456,10 +586,17 @@ struct OnboardingView: View {
 
             if updatedDraft.businessDisplayName.trimmed.isEmpty {
                 updatedDraft.businessDisplayName = updatedDraft.businessName
+                log("businessDisplayName was empty -> copied from businessName")
             }
 
             if updatedDraft.contactPhone.trimmed.isEmpty {
                 updatedDraft.contactPhone = updatedDraft.phone
+                log("contactPhone was empty -> copied from phone")
+            }
+
+            if updatedDraft.legalBusinessName.trimmed.isEmpty {
+                updatedDraft.legalBusinessName = updatedDraft.businessName
+                log("legalBusinessName was empty -> copied from businessName")
             }
 
             updatedDraft.logoImageData = logoImageData
@@ -474,10 +611,47 @@ struct OnboardingView: View {
             let canContinue = await auth.ensureUsernameValidForNextStep()
             log("ensureUsernameValidForNextStep -> \(canContinue)")
             log("username validation state -> \(String(describing: auth.usernameValidationState))")
+
             guard canContinue else {
                 log("nextAction stopped on publicLink")
                 return
             }
+        }
+
+        if step == .brandColor {
+            log("brandColor step saved")
+            log("publicCountry -> '\(draft.publicCountry)'")
+            log("publicDomain -> '\(publicDomain)'")
+            log("publicLanguage -> '\(draft.publicLanguage)'")
+            log("publicCurrency -> '\(draft.publicCurrency)'")
+            logDraftState(prefix: "after brandColor")
+        }
+
+        if step == .legalDetails {
+            var updatedDraft = draft
+
+            updatedDraft.nip = updatedDraft.nip.trimmed
+
+            if updatedDraft.nip.isEmpty {
+                log("LEGAL DETAILS: NIP is empty and this is OK — continuing without NIP")
+            } else {
+                log("LEGAL DETAILS: NIP provided -> '\(updatedDraft.nip)'")
+            }
+
+            if updatedDraft.complaintEmail.trimmed.isEmpty {
+                updatedDraft.complaintEmail = updatedDraft.contactEmail
+                log("complaintEmail was empty -> copied from contactEmail")
+            }
+
+            if updatedDraft.complaintPhone.trimmed.isEmpty {
+                updatedDraft.complaintPhone = updatedDraft.contactPhone
+                log("complaintPhone was empty -> copied from contactPhone")
+            }
+
+            draft = updatedDraft
+
+            log("legalDetails step saved into draft")
+            logDraftState(prefix: "after legalDetails")
         }
 
         if step == .firstMenu {
@@ -485,28 +659,67 @@ struct OnboardingView: View {
             updatedDraft.firstItemImageData = firstItemImageData
             draft = updatedDraft
 
-            log("firstMenu image saved into draft -> \(firstItemImageData != nil)")
+            log("firstMenu image saved into draft -> \(firstItemImageData != nil) | bytes: \(firstItemImageData?.count ?? 0)")
             logDraftState(prefix: "after firstMenu")
         }
 
         if step == .finish {
             var updatedDraft = draft
+
             updatedDraft.logoImageData = logoImageData
             updatedDraft.firstItemImageData = firstItemImageData
+
+            updatedDraft.nip = updatedDraft.nip.trimmed
+
+            if updatedDraft.nip.isEmpty {
+                log("FINISH: NIP is EMPTY. This should be allowed now")
+            } else {
+                log("FINISH: NIP is NOT empty -> '\(updatedDraft.nip)'")
+            }
+
+            if updatedDraft.complaintEmail.trimmed.isEmpty {
+                updatedDraft.complaintEmail = updatedDraft.contactEmail
+                log("FINISH: complaintEmail was empty -> copied contactEmail")
+            }
+
+            if updatedDraft.complaintPhone.trimmed.isEmpty {
+                updatedDraft.complaintPhone = updatedDraft.contactPhone
+                log("FINISH: complaintPhone was empty -> copied contactPhone")
+            }
+
             auth.onboardingDraft = updatedDraft
 
-            log("about to completeOnboarding")
+            log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            log("ABOUT TO CALL auth.completeOnboarding()")
             logDraftState(prefix: "before completeOnboarding")
+            log("auth.profile before complete -> \(auth.profile != nil)")
+            log("auth.profile id before complete -> \(auth.profile?.id.uuidString ?? "nil")")
+            log("auth.errorMessage before complete -> \(auth.errorMessage ?? "nil")")
+            log("auth.noticeMessage before complete -> \(auth.noticeMessage ?? "nil")")
+            log("auth.isLoading before complete -> \(auth.isLoading)")
+            log("auth.onboardingStep before complete -> \(auth.onboardingStep.rawValue) \(auth.onboardingStep.title)")
+            log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
             await auth.completeOnboarding()
 
-            log("completeOnboarding finished")
+            log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            log("auth.completeOnboarding() FINISHED")
             log("auth.errorMessage after complete -> \(auth.errorMessage ?? "nil")")
             log("auth.noticeMessage after complete -> \(auth.noticeMessage ?? "nil")")
             log("auth.isLoading after complete -> \(auth.isLoading)")
             log("auth.profile exists after complete -> \(auth.profile != nil)")
             log("auth.profile id after complete -> \(auth.profile?.id.uuidString ?? "nil")")
             log("auth.onboardingStep after complete -> \(auth.onboardingStep.rawValue) \(auth.onboardingStep.title)")
+            log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+            if let errorMessage = auth.errorMessage, !errorMessage.isEmpty {
+                log("❌ PROFILE CREATION FAILED WITH ERROR -> \(errorMessage)")
+            } else if auth.profile == nil {
+                log("⚠️ completeOnboarding finished without error, but auth.profile is still nil")
+                log("⚠️ This usually means completeOnboarding did not refetch or assign profile")
+            } else {
+                log("✅ PROFILE CREATION LOOKS SUCCESSFUL")
+            }
         } else {
             let nextStep = OnboardingStep(rawValue: step.rawValue + 1) ?? .finish
             log("moving to next step -> \(nextStep.rawValue) \(nextStep.title)")
@@ -519,11 +732,103 @@ struct OnboardingView: View {
 
     private func binding<Value>(_ keyPath: WritableKeyPath<OnboardingDraft, Value>) -> Binding<Value> {
         Binding(
-            get: { auth.onboardingDraft[keyPath: keyPath] },
+            get: {
+                auth.onboardingDraft[keyPath: keyPath]
+            },
             set: { newValue in
                 auth.onboardingDraft[keyPath: keyPath] = newValue
             }
         )
+    }
+
+    private func logValidationStateForCurrentStep() {
+        switch step {
+        case .basicInfo:
+            log("""
+            validation basicInfo:
+               businessName ok -> \(draft.businessName.trimmed.count >= 2) | '\(draft.businessName)'
+               address ok -> \(draft.address.trimmed.count >= 3) | '\(draft.address)'
+               phone ok -> \(draft.phone.trimmed.count >= 6) | '\(draft.phone)'
+            """)
+
+        case .publicLink:
+            log("""
+            validation publicLink:
+               username raw -> '\(draft.username)'
+               username slug -> '\(draft.username.slugified)'
+               username count ok -> \(draft.username.slugified.count >= 3)
+               validationState -> \(String(describing: auth.usernameValidationState))
+            """)
+
+        case .brandColor:
+            log("""
+            validation brandColor:
+               accentColorHex -> '\(draft.accentColorHex)'
+               has # -> \(draft.accentColorHex.trimmed.hasPrefix("#"))
+               count == 7 -> \(draft.accentColorHex.trimmed.count == 7)
+               publicCountry -> '\(draft.publicCountry)'
+               publicCountry valid -> \(["pl", "uk"].contains(draft.publicCountry))
+               publicDomain -> '\(publicDomain)'
+               publicLanguage -> '\(draft.publicLanguage)'
+               publicLanguage valid -> \(["pl", "en"].contains(draft.publicLanguage))
+               publicCurrency -> '\(draft.publicCurrency)'
+               publicCurrency valid -> \(["PLN", "EUR", "USD", "GBP", "CAD", "UAH"].contains(draft.publicCurrency))
+            """)
+
+        case .legalDetails:
+            log("""
+            validation legalDetails:
+               legalBusinessName ok -> \(draft.legalBusinessName.trimmed.count >= 2) | '\(draft.legalBusinessName)'
+               businessDisplayName ok -> \(draft.businessDisplayName.trimmed.count >= 2) | '\(draft.businessDisplayName)'
+               NIP optional -> raw: '\(draft.nip)' | trimmed: '\(draft.nip.trimmed)' | isEmpty: \(draft.nip.trimmed.isEmpty)
+               addressLine1 ok -> \(draft.addressLine1.trimmed.count >= 3) | '\(draft.addressLine1)'
+               postalCode ok -> \(draft.postalCode.trimmed.count >= 3) | '\(draft.postalCode)'
+               city ok -> \(draft.city.trimmed.count >= 2) | '\(draft.city)'
+               contactEmail ok -> \(draft.contactEmail.trimmed.contains("@")) | '\(draft.contactEmail)'
+               contactPhone ok -> \(draft.contactPhone.trimmed.count >= 6) | '\(draft.contactPhone)'
+            """)
+
+        case .fulfillment:
+            let hasPaymentMethod = draft.cashPaymentAvailable || draft.cardPaymentAvailable || draft.blikPaymentAvailable
+            let hasFulfillment = draft.pickupAvailable || draft.deliveryAvailable
+            let deliveryAreaOk = !draft.deliveryAvailable || draft.deliveryArea.trimmed.count >= 2
+            let deliveryPriceOk = !draft.deliveryAvailable || Double(draft.deliveryPricePerKm.replacingOccurrences(of: ",", with: ".")) != nil
+
+            log("""
+            validation fulfillment:
+               hasFulfillment -> \(hasFulfillment)
+               hasPaymentMethod -> \(hasPaymentMethod)
+               deliveryAvailable -> \(draft.deliveryAvailable)
+               deliveryAreaOk -> \(deliveryAreaOk) | '\(draft.deliveryArea)'
+               deliveryPriceOk -> \(deliveryPriceOk) | '\(draft.deliveryPricePerKm)'
+            """)
+
+        case .openingHours:
+            log("""
+            validation openingHours:
+               hasOpenDay -> \(draft.days.contains(where: { !$0.isClosed }))
+               closedDaysCount -> \(draft.days.filter { $0.isClosed }.count)
+               totalDays -> \(draft.days.count)
+            """)
+
+        case .orderSettings:
+            log("""
+            validation orderSettings:
+               slotIntervalMinutes -> \(draft.slotIntervalMinutes)
+               slot valid -> \([5, 10, 15, 20, 30, 45, 60].contains(draft.slotIntervalMinutes))
+            """)
+
+        case .firstMenu:
+            log("""
+            validation firstMenu:
+               categoryName ok -> \(draft.categoryName.trimmed.count >= 2) | '\(draft.categoryName)'
+               firstItemName ok -> \(draft.firstItemName.trimmed.count >= 2) | '\(draft.firstItemName)'
+               price ok -> \(Double(draft.firstItemPrice.replacingOccurrences(of: ",", with: ".")) != nil) | '\(draft.firstItemPrice)'
+            """)
+
+        case .finish:
+            log("validation finish: always true")
+        }
     }
 
     private func log(_ message: String) {
@@ -534,30 +839,63 @@ struct OnboardingView: View {
         print("""
         🟠 [OnboardingView] \(prefix)
            step: \(step.rawValue) \(step.title)
-           businessName: \(draft.businessName)
-           username: \(draft.username)
-           accentColorHex: \(draft.accentColorHex)
-           legalBusinessName: \(draft.legalBusinessName)
-           businessDisplayName: \(draft.businessDisplayName)
-           nip: \(draft.nip)
-           addressLine1: \(draft.addressLine1)
-           postalCode: \(draft.postalCode)
-           city: \(draft.city)
-           contactEmail: \(draft.contactEmail)
-           contactPhone: \(draft.contactPhone)
+
+           BASIC:
+           businessName: '\(draft.businessName)'
+           address: '\(draft.address)'
+           phone: '\(draft.phone)'
+           username: '\(draft.username)'
+           usernameSlugified: '\(draft.username.slugified)'
+           accentColorHex: '\(draft.accentColorHex)'
+           publicCountry: '\(draft.publicCountry)'
+           publicDomain: '\(publicDomain)'
+           publicLanguage: '\(draft.publicLanguage)'
+           publicCurrency: '\(draft.publicCurrency)'
+           LEGAL:
+           legalBusinessName: '\(draft.legalBusinessName)'
+           businessDisplayName: '\(draft.businessDisplayName)'
+           nip raw: '\(draft.nip)'
+           nip trimmed: '\(draft.nip.trimmed)'
+           nip isEmpty: \(draft.nip.trimmed.isEmpty)
+           addressLine1: '\(draft.addressLine1)'
+           addressLine2: '\(draft.addressLine2)'
+           postalCode: '\(draft.postalCode)'
+           city: '\(draft.city)'
+           country: '\(draft.country)'
+           contactEmail: '\(draft.contactEmail)'
+           contactPhone: '\(draft.contactPhone)'
+           complaintEmail: '\(draft.complaintEmail)'
+           complaintPhone: '\(draft.complaintPhone)'
+
+           FULFILLMENT:
            pickupAvailable: \(draft.pickupAvailable)
            deliveryAvailable: \(draft.deliveryAvailable)
+           deliveryArea: '\(draft.deliveryArea)'
+           deliveryPricePerKm: '\(draft.deliveryPricePerKm)'
            cashPaymentAvailable: \(draft.cashPaymentAvailable)
            cardPaymentAvailable: \(draft.cardPaymentAvailable)
            blikPaymentAvailable: \(draft.blikPaymentAvailable)
+
+           ORDERS:
            isAcceptingOrders: \(draft.isAcceptingOrders)
            smsConfirmationEnabled: \(draft.smsConfirmationEnabled)
            slotIntervalMinutes: \(draft.slotIntervalMinutes)
-           categoryName: \(draft.categoryName)
-           firstItemName: \(draft.firstItemName)
-           firstItemPrice: \(draft.firstItemPrice)
-           hasLogoImageData: \(logoImageData != nil)
-           hasFirstItemImageData: \(firstItemImageData != nil)
+
+           MENU:
+           categoryName: '\(draft.categoryName)'
+           firstItemName: '\(draft.firstItemName)'
+           firstItemDescription: '\(draft.firstItemDescription)'
+           firstItemPrice: '\(draft.firstItemPrice)'
+
+           IMAGES:
+           hasLogoImageData state: \(logoImageData != nil)
+           logoImageData bytes state: \(logoImageData?.count ?? 0)
+           hasLogoImageData draft: \(draft.logoImageData != nil)
+           logoImageData bytes draft: \(draft.logoImageData?.count ?? 0)
+           hasFirstItemImageData state: \(firstItemImageData != nil)
+           firstItemImageData bytes state: \(firstItemImageData?.count ?? 0)
+           hasFirstItemImageData draft: \(draft.firstItemImageData != nil)
+           firstItemImageData bytes draft: \(draft.firstItemImageData?.count ?? 0)
         """)
     }
 }
@@ -574,8 +912,8 @@ struct BasicInfoStepView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
-                title: "Profil lokalu",
-                subtitle: "Dodaj podstawowe dane widoczne na stronie lokalu i w panelu"
+                title: OnboardingText.t("onboarding.basic.hero.title"),
+                subtitle: OnboardingText.t("onboarding.basic.hero.subtitle")
             ) {
                 HStack(spacing: 12) {
                     ZStack {
@@ -589,11 +927,11 @@ struct BasicInfoStepView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Podstawowe informacje")
+                        Text(OnboardingText.t("onboarding.basic.info.title"))
                             .font(.wix(17, wixWeight: .semiBold))
                             .foregroundStyle(.black)
 
-                        Text("Nazwa, adres, telefon i logo będą widoczne dla klientów")
+                        Text(OnboardingText.t("onboarding.basic.info.subtitle"))
                             .font(.wix(13, wixWeight: .regular))
                             .foregroundStyle(.black.opacity(0.58))
                             .fixedSize(horizontal: false, vertical: true)
@@ -608,7 +946,7 @@ struct BasicInfoStepView: View {
 
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Logo lokalu")
+                    Text(OnboardingText.t("onboarding.basic.logo.title"))
                         .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
@@ -630,7 +968,7 @@ struct BasicInfoStepView: View {
                                                 .font(.system(size: 22, weight: .semibold))
                                                 .foregroundStyle(.black)
 
-                                            Text("Dodaj logo")
+                                            Text(OnboardingText.t("onboarding.basic.logo.add"))
                                                 .font(.wix(13, wixWeight: .semiBold))
                                                 .foregroundStyle(.black)
                                         }
@@ -641,15 +979,15 @@ struct BasicInfoStepView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Zdjęcie logo")
+                                Text(OnboardingText.t("onboarding.basic.logo.photo"))
                                     .font(.wix(17, wixWeight: .semiBold))
                                     .foregroundStyle(.black)
 
-                                Text("Pokaże się na stronie lokalu i w panelu")
+                                Text(OnboardingText.t("onboarding.basic.logo.subtitle"))
                                     .font(.wix(14, wixWeight: .regular))
                                     .foregroundStyle(.black.opacity(0.58))
 
-                                Text("Opcjonalne")
+                                Text(OnboardingText.t(OnboardingText.optional))
                                     .font(.wix(12, wixWeight: .semiBold))
                                     .foregroundStyle(.black.opacity(0.42))
                                     .padding(.horizontal, 10)
@@ -671,9 +1009,9 @@ struct BasicInfoStepView: View {
 
             LMCard {
                 VStack(spacing: 14) {
-                    LMInputField(title: "Nazwa lokalu", text: $businessName)
-                    LMInputField(title: "Adres", text: $address)
-                    LMInputField(title: "Telefon", text: $phone, keyboard: .phonePad)
+                    LMInputField(title: OnboardingText.t("onboarding.basic.field.business_name"), text: $businessName)
+                    LMInputField(title: OnboardingText.t("onboarding.basic.field.address"), text: $address)
+                    LMInputField(title: OnboardingText.t("onboarding.basic.field.phone"), text: $phone, keyboard: .phonePad)
                 }
             }
         }
@@ -683,27 +1021,30 @@ struct BasicInfoStepView: View {
 
 struct PublicLinkStepView: View {
     @Binding var username: String
+    let domain: String
     let accentSoft: Color
     let validationState: AuthViewModel.UsernameValidationState
     let isBusy: Bool
     let onCheckNow: () async -> Void
 
     private var preview: String {
-        username.slugified.isEmpty ? "twoj-lokal" : username.slugified
+        username.slugified.isEmpty
+        ? OnboardingText.t("onboarding.public_link.preview.placeholder")
+        : username.slugified
     }
 
     private var helperText: String {
         switch validationState {
         case .idle:
-            return "Użyj małych liter, cyfr i myślników"
+            return OnboardingText.t("onboarding.public_link.helper.idle")
         case .typing:
-            return "Za chwilę sprawdzimy dostępność linku"
+            return OnboardingText.t("onboarding.public_link.helper.typing")
         case .checking:
-            return "Sprawdzanie dostępności..."
+            return OnboardingText.t("onboarding.public_link.helper.checking")
         case .available:
-            return "Ten link jest dostępny"
+            return OnboardingText.t("onboarding.public_link.helper.available")
         case .taken:
-            return "Ten link jest już zajęty"
+            return OnboardingText.t("onboarding.public_link.helper.taken")
         case .invalid(let message):
             return message
         case .error(let message):
@@ -736,12 +1077,12 @@ struct PublicLinkStepView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
-                title: "Wybierz swój link",
-                subtitle: "To będzie adres, który udostępnisz klientom w social media i wiadomościach"
+                title: OnboardingText.t("onboarding.public_link.hero.title"),
+                subtitle: OnboardingText.t("onboarding.public_link.hero.subtitle")
             ) {
                 VStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 8) {
-                        LMInputField(title: "Nazwa w linku", text: $username)
+                        LMInputField(title: OnboardingText.t("onboarding.public_link.field.username"), text: $username)
 
                         HStack(spacing: 8) {
                             if case .checking = validationState {
@@ -765,7 +1106,7 @@ struct PublicLinkStepView: View {
                     )
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Podgląd")
+                        Text(OnboardingText.t("onboarding.public_link.preview.title"))
                             .font(.wix(13, wixWeight: .medium))
                             .foregroundStyle(.black.opacity(0.45))
 
@@ -774,7 +1115,7 @@ struct PublicLinkStepView: View {
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(.black)
 
-                            Text("lamenu.pl/\(preview)")
+                            Text("\(domain)/\(preview)")
                                 .font(.wix(18, wixWeight: .semiBold))
                                 .foregroundStyle(.black)
                                 .lineLimit(1)
@@ -791,8 +1132,8 @@ struct PublicLinkStepView: View {
 
             LMInfoCard(
                 icon: "sparkles",
-                title: "Krótko i czytelnie",
-                subtitle: "Prosty link łatwiej zapamiętać i lepiej wygląda w internecie"
+                title: OnboardingText.t("onboarding.public_link.info.title"),
+                subtitle: OnboardingText.t("onboarding.public_link.info.subtitle")
             )
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -814,6 +1155,9 @@ struct PublicLinkStepView: View {
 
 struct BrandColorStepView: View {
     @Binding var accentColorHex: String
+    @Binding var publicCountry: String
+    @Binding var publicLanguage: String
+    @Binding var publicCurrency: String
 
     private let presets: [String] = [
         "#FFAA00",
@@ -822,6 +1166,25 @@ struct BrandColorStepView: View {
         "#111111",
         "#3B82F6",
         "#8B5CF6"
+    ]
+    
+    private let countryOptions: [CountryOption] = [
+        .init(code: "pl", title: "Polska", domain: "lamenu.pl", flag: "🇵🇱"),
+        .init(code: "uk", title: "United Kingdom", domain: "lamenu.uk", flag: "🇬🇧")
+    ]
+
+    private let languageOptions: [LanguageOption] = [
+        .init(code: "pl", title: "Polski", subtitle: "Język strony publicznej", flag: "🇵🇱"),
+        .init(code: "en", title: "English", subtitle: "Public menu language", flag: "🇬🇧")
+    ]
+
+    private let currencyOptions: [CurrencyOption] = [
+        .init(code: "PLN", title: "Polski złoty", symbol: "zł", flag: "🇵🇱"),
+        .init(code: "EUR", title: "Euro", symbol: "€", flag: "🇪🇺"),
+        .init(code: "USD", title: "US Dollar", symbol: "$", flag: "🇺🇸"),
+        .init(code: "GBP", title: "British Pound", symbol: "£", flag: "🇬🇧"),
+        .init(code: "CAD", title: "Canadian Dollar", symbol: "$", flag: "🇨🇦"),
+        .init(code: "UAH", title: "Ukrainian Hryvnia", symbol: "₴", flag: "🇺🇦")
     ]
 
     private var selectedColorBinding: Binding<Color> {
@@ -832,25 +1195,41 @@ struct BrandColorStepView: View {
             }
         )
     }
+    
+    private var selectedCountry: CountryOption {
+        countryOptions.first(where: { $0.code == publicCountry }) ?? countryOptions[0]
+    }
+
+    private var selectedLanguage: LanguageOption {
+        languageOptions.first(where: { $0.code == publicLanguage }) ?? languageOptions[0]
+    }
+
+    private var selectedCurrency: CurrencyOption {
+        currencyOptions.first(where: { $0.code == publicCurrency }) ?? currencyOptions[0]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
-                title: "Wybierz kolor firmowy",
-                subtitle: "Ten kolor będzie używany w przyciskach, akcentach i elementach marki"
+                title: OnboardingText.t("onboarding.brand.hero.title"),
+                subtitle: OnboardingText.t("onboarding.brand.hero.subtitle")
             ) {
                 EmptyView()
             }
 
             LMCard {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("Kolor marki")
+                    Text(OnboardingText.t("onboarding.brand.card.title"))
                         .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
-                    ColorPicker("Wybierz kolor", selection: selectedColorBinding, supportsOpacity: false)
-                        .font(.wix(16, wixWeight: .medium))
-                        .foregroundStyle(.black)
+                    ColorPicker(
+                        OnboardingText.t("onboarding.brand.color_picker"),
+                        selection: selectedColorBinding,
+                        supportsOpacity: false
+                    )
+                    .font(.wix(16, wixWeight: .medium))
+                    .foregroundStyle(.black)
 
                     HStack(spacing: 12) {
                         ForEach(presets, id: \.self) { hex in
@@ -880,7 +1259,7 @@ struct BrandColorStepView: View {
                             .frame(width: 62, height: 62)
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Wybrany kolor")
+                            Text(OnboardingText.t("onboarding.brand.selected.title"))
                                 .font(.wix(13, wixWeight: .medium))
                                 .foregroundStyle(.black.opacity(0.45))
 
@@ -896,14 +1275,177 @@ struct BrandColorStepView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
             }
+            
+            LMCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Kraj i domena")
+                        .font(.wix(18, wixWeight: .semiBold))
+                        .foregroundStyle(.black)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Rynek publicznej strony menu")
+                            .font(.wix(13, wixWeight: .medium))
+                            .foregroundStyle(.black.opacity(0.45))
+
+                        Menu {
+                            ForEach(countryOptions) { option in
+                                Button {
+                                    publicCountry = option.code
+
+                                    if option.code == "uk" {
+                                        publicLanguage = "en"
+                                        publicCurrency = "GBP"
+                                    } else {
+                                        publicLanguage = "pl"
+                                        publicCurrency = "PLN"
+                                    }
+                                } label: {
+                                    Text("\(option.flag) \(option.title) — \(option.domain)")
+                                }
+                            }
+                        } label: {
+                            LMSelectRow(
+                                leading: selectedCountry.flag,
+                                title: selectedCountry.title,
+                                subtitle: selectedCountry.domain,
+                                value: selectedCountry.code.uppercased()
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            LMCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Język i waluta")
+                        .font(.wix(18, wixWeight: .semiBold))
+                        .foregroundStyle(.black)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Język strony menu")
+                            .font(.wix(13, wixWeight: .medium))
+                            .foregroundStyle(.black.opacity(0.45))
+
+                        Menu {
+                            ForEach(languageOptions) { option in
+                                Button {
+                                    publicLanguage = option.code
+                                } label: {
+                                    Text("\(option.flag) \(option.title)")
+                                }
+                            }
+                        } label: {
+                            LMSelectRow(
+                                leading: selectedLanguage.flag,
+                                title: selectedLanguage.title,
+                                subtitle: selectedLanguage.subtitle,
+                                value: selectedLanguage.code.uppercased()
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Waluta")
+                            .font(.wix(13, wixWeight: .medium))
+                            .foregroundStyle(.black.opacity(0.45))
+
+                        Menu {
+                            ForEach(currencyOptions) { option in
+                                Button {
+                                    publicCurrency = option.code
+                                } label: {
+                                    Text("\(option.flag) \(option.code) \(option.symbol)")
+                                }
+                            }
+                        } label: {
+                            LMSelectRow(
+                                leading: selectedCurrency.flag,
+                                title: selectedCurrency.title,
+                                subtitle: selectedCurrency.symbol,
+                                value: selectedCurrency.code
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
 
             LMInfoCard(
                 icon: "paintpalette.fill",
-                title: "Kolor marki",
-                subtitle: "Możesz go później zmienić w panelu ustawień profilu"
+                title: OnboardingText.t("onboarding.brand.info.title"),
+                subtitle: OnboardingText.t("onboarding.brand.info.subtitle")
             )
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+private struct CountryOption: Identifiable {
+    let code: String
+    let title: String
+    let domain: String
+    let flag: String
+
+    var id: String { code }
+}
+
+private struct LanguageOption: Identifiable {
+    let code: String
+    let title: String
+    let subtitle: String
+    let flag: String
+
+    var id: String { code }
+}
+
+private struct CurrencyOption: Identifiable {
+    let code: String
+    let title: String
+    let symbol: String
+    let flag: String
+
+    var id: String { code }
+}
+
+private struct LMSelectRow: View {
+    let leading: String
+    let title: String
+    let subtitle: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Text(leading)
+                .font(.system(size: 28))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.wix(16, wixWeight: .semiBold))
+                    .foregroundStyle(.black)
+
+                Text(subtitle)
+                    .font(.wix(13, wixWeight: .regular))
+                    .foregroundStyle(.black.opacity(0.52))
+            }
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                Text(value)
+                    .font(.wix(14, wixWeight: .bold))
+                    .foregroundStyle(.black.opacity(0.7))
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.black.opacity(0.5))
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 66)
+        .background(Color.black.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 
@@ -924,36 +1466,36 @@ struct LegalDetailsStepView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
-                title: "Dane do dokumentów",
-                subtitle: "Te informacje pojawią się w danych sprzedawcy, regulaminie zamówień i polityce prywatności lokalu"
+                title: OnboardingText.t("onboarding.legal.hero.title"),
+                subtitle: OnboardingText.t("onboarding.legal.hero.subtitle")
             ) {
                 EmptyView()
             }
 
             LMCard {
                 VStack(spacing: 14) {
-                    LMInputField(title: "Pełna nazwa firmy", text: $legalBusinessName)
-                    LMInputField(title: "Nazwa widoczna dla klientów", text: $businessDisplayName)
-                    LMInputField(title: "NIP opcjonalnie", text: $nip, keyboard: .numberPad)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.legal_business_name"), text: $legalBusinessName)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.business_display_name"), text: $businessDisplayName)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.nip_optional"), text: $nip, keyboard: .numberPad)
                 }
             }
 
             LMCard {
                 VStack(spacing: 14) {
-                    LMInputField(title: "Adres — linia 1", text: $addressLine1)
-                    LMInputField(title: "Adres — linia 2", text: $addressLine2)
-                    LMInputField(title: "Kod pocztowy", text: $postalCode)
-                    LMInputField(title: "Miasto", text: $city)
-                    LMInputField(title: "Kraj", text: $country)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.address_line_1"), text: $addressLine1)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.address_line_2"), text: $addressLine2)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.postal_code"), text: $postalCode)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.city"), text: $city)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.country"), text: $country)
                 }
             }
 
             LMCard {
                 VStack(spacing: 14) {
-                    LMInputField(title: "E-mail kontaktowy", text: $contactEmail, keyboard: .emailAddress)
-                    LMInputField(title: "Telefon kontaktowy", text: $contactPhone, keyboard: .phonePad)
-                    LMInputField(title: "E-mail reklamacyjny", text: $complaintEmail, keyboard: .emailAddress)
-                    LMInputField(title: "Telefon reklamacyjny", text: $complaintPhone, keyboard: .phonePad)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.contact_email"), text: $contactEmail, keyboard: .emailAddress)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.contact_phone"), text: $contactPhone, keyboard: .phonePad)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.complaint_email"), text: $complaintEmail, keyboard: .emailAddress)
+                    LMInputField(title: OnboardingText.t("onboarding.legal.field.complaint_phone"), text: $complaintPhone, keyboard: .phonePad)
                 }
             }
         }
@@ -974,42 +1516,45 @@ struct FulfillmentStepView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
-                title: "Realizacja i płatność",
-                subtitle: "Ustaw dostępne formy odbioru, dostawę i metody płatności"
+                title: OnboardingText.t("onboarding.fulfillment.hero.title"),
+                subtitle: OnboardingText.t("onboarding.fulfillment.hero.subtitle")
             ) {
                 EmptyView()
             }
 
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Formy realizacji")
+                    Text(OnboardingText.t("onboarding.fulfillment.section.fulfillment"))
                         .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
                     LMToggleRow(
-                        title: "Odbiór osobisty",
-                        subtitle: "Klient odbiera zamówienie na miejscu",
+                        title: OnboardingText.t("onboarding.fulfillment.pickup.title"),
+                        subtitle: OnboardingText.t("onboarding.fulfillment.pickup.subtitle"),
                         isOn: $pickupAvailable,
                         tint: accentColor
                     )
 
                     LMToggleRow(
-                        title: "Dostawa",
-                        subtitle: "Klient może zamówić z dostawą",
+                        title: OnboardingText.t("onboarding.fulfillment.delivery.title"),
+                        subtitle: OnboardingText.t("onboarding.fulfillment.delivery.subtitle"),
                         isOn: $deliveryAvailable,
                         tint: accentColor
                     )
 
                     if deliveryAvailable {
-                        LMInputField(title: "Obszar dostawy", text: $deliveryArea)
+                        LMInputField(
+                            title: OnboardingText.t("onboarding.fulfillment.field.delivery_area"),
+                            text: $deliveryArea
+                        )
 
                         LMInputField(
-                            title: "Cena za 1 km",
+                            title: OnboardingText.t("onboarding.fulfillment.field.delivery_price_per_km"),
                             text: $deliveryPricePerKm,
                             keyboard: .decimalPad
                         )
 
-                        Text("Ta stawka będzie widoczna przy zamówieniu z dostawą")
+                        Text(OnboardingText.t("onboarding.fulfillment.delivery_price_hint"))
                             .font(.wix(13, wixWeight: .regular))
                             .foregroundStyle(.black.opacity(0.5))
                     }
@@ -1018,27 +1563,27 @@ struct FulfillmentStepView: View {
 
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Metody płatności")
+                    Text(OnboardingText.t("onboarding.fulfillment.section.payment_methods"))
                         .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
                     LMToggleRow(
-                        title: "Gotówka",
-                        subtitle: "Płatność gotówką przy odbiorze lub dostawie",
+                        title: OnboardingText.t("onboarding.fulfillment.payment.cash.title"),
+                        subtitle: OnboardingText.t("onboarding.fulfillment.payment.cash.subtitle"),
                         isOn: $cashPaymentAvailable,
                         tint: accentColor
                     )
 
                     LMToggleRow(
-                        title: "Karta",
-                        subtitle: "Płatność kartą",
+                        title: OnboardingText.t("onboarding.fulfillment.payment.card.title"),
+                        subtitle: OnboardingText.t("onboarding.fulfillment.payment.card.subtitle"),
                         isOn: $cardPaymentAvailable,
                         tint: accentColor
                     )
 
                     LMToggleRow(
-                        title: "BLIK",
-                        subtitle: "Płatność BLIK",
+                        title: OnboardingText.t("onboarding.fulfillment.payment.blik.title"),
+                        subtitle: OnboardingText.t("onboarding.fulfillment.payment.blik.subtitle"),
                         isOn: $blikPaymentAvailable,
                         tint: accentColor
                     )
@@ -1056,8 +1601,8 @@ struct OpeningHoursStepView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             LMHeroCard(
-                title: "Godziny otwarcia",
-                subtitle: "Klienci od razu zobaczą, kiedy lokal przyjmuje zamówienia"
+                title: OnboardingText.t("onboarding.opening_hours.hero.title"),
+                subtitle: OnboardingText.t("onboarding.opening_hours.hero.subtitle")
             ) {
                 EmptyView()
             }
@@ -1071,7 +1616,7 @@ struct OpeningHoursStepView: View {
                                     .font(.wix(18, wixWeight: .semiBold))
                                     .foregroundStyle(.black)
 
-                                Text(day.isClosed ? "Lokal zamknięty" : "Lokal otwarty")
+                                Text(day.isClosed ? OnboardingText.t("onboarding.opening_hours.closed") : OnboardingText.t("onboarding.opening_hours.open"))
                                     .font(.wix(13, wixWeight: .regular))
                                     .foregroundStyle(.black.opacity(0.48))
                             }
@@ -1091,8 +1636,15 @@ struct OpeningHoursStepView: View {
 
                         if !day.isClosed {
                             HStack(spacing: 12) {
-                                LMTimePickerCard(title: "Otwarcie", date: $day.openDate)
-                                LMTimePickerCard(title: "Zamknięcie", date: $day.closeDate)
+                                LMTimePickerCard(
+                                    title: OnboardingText.t("onboarding.opening_hours.opening"),
+                                    date: $day.openDate
+                                )
+
+                                LMTimePickerCard(
+                                    title: OnboardingText.t("onboarding.opening_hours.closing"),
+                                    date: $day.closeDate
+                                )
                             }
                         }
                     }
@@ -1114,21 +1666,21 @@ struct OrderSettingsStepView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
-                title: "Przyjmowanie zamówień",
-                subtitle: "Włącz lub wyłącz zamówienia, ustaw odstęp między slotami i wybierz, czy klient ma dostać SMS po złożeniu zamówienia"
+                title: OnboardingText.t("onboarding.order_settings.hero.title"),
+                subtitle: OnboardingText.t("onboarding.order_settings.hero.subtitle")
             ) {
                 EmptyView()
             }
 
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Status zamówień")
+                    Text(OnboardingText.t("onboarding.order_settings.section.status"))
                         .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
                     LMToggleRow(
-                        title: "Zamówienia przyjmowane",
-                        subtitle: "Gdy wyłączone, klienci zobaczą informację, że lokal chwilowo nie przyjmuje zamówień",
+                        title: OnboardingText.t("onboarding.order_settings.accepting_orders.title"),
+                        subtitle: OnboardingText.t("onboarding.order_settings.accepting_orders.subtitle"),
                         isOn: $isAcceptingOrders,
                         tint: accentColor
                     )
@@ -1137,13 +1689,13 @@ struct OrderSettingsStepView: View {
 
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Powiadomienia SMS")
+                    Text(OnboardingText.t("onboarding.order_settings.section.sms"))
                         .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
                     LMToggleRow(
-                        title: "SMS z potwierdzeniem zamówienia",
-                        subtitle: "Po złożeniu zamówienia klient dostanie wiadomość SMS na podany numer telefonu",
+                        title: OnboardingText.t("onboarding.order_settings.sms.title"),
+                        subtitle: OnboardingText.t("onboarding.order_settings.sms.subtitle"),
                         isOn: $smsConfirmationEnabled,
                         tint: accentColor
                     )
@@ -1152,23 +1704,23 @@ struct OrderSettingsStepView: View {
 
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Sloty czasowe")
+                    Text(OnboardingText.t("onboarding.order_settings.section.slots"))
                         .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
-                    Text("Odstęp między slotami")
+                    Text(OnboardingText.t("onboarding.order_settings.slot_interval"))
                         .font(.wix(13, wixWeight: .medium))
                         .foregroundStyle(.black.opacity(0.45))
 
                     Menu {
                         ForEach(slotOptions, id: \.self) { value in
-                            Button("\(value) min") {
+                            Button("\(value) \(OnboardingText.t(OnboardingText.minutesShort))") {
                                 slotIntervalMinutes = value
                             }
                         }
                     } label: {
                         HStack {
-                            Text("\(slotIntervalMinutes) min")
+                            Text("\(slotIntervalMinutes) \(OnboardingText.t(OnboardingText.minutesShort))")
                                 .font(.wix(16, wixWeight: .semiBold))
                                 .foregroundStyle(.black)
 
@@ -1202,25 +1754,28 @@ struct FirstMenuStepView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             LMHeroCard(
-                title: "Pierwsza kategoria i pierwsza pozycja",
-                subtitle: "Najpierw utwórz kategorię, a potem dodaj do niej pierwszą pozycję ze zdjęciem"
+                title: OnboardingText.t("onboarding.first_menu.hero.title"),
+                subtitle: OnboardingText.t("onboarding.first_menu.hero.subtitle")
             ) {
                 EmptyView()
             }
 
             LMCard {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Kategoria")
+                    Text(OnboardingText.t("onboarding.first_menu.section.category"))
                         .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
-                    LMInputField(title: "Utwórz kategorię", text: $categoryName)
+                    LMInputField(
+                        title: OnboardingText.t("onboarding.first_menu.field.category"),
+                        text: $categoryName
+                    )
                 }
             }
 
             LMCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Pierwsza pozycja")
+                    Text(OnboardingText.t("onboarding.first_menu.section.first_item"))
                         .font(.wix(18, wixWeight: .semiBold))
                         .foregroundStyle(.black)
 
@@ -1242,7 +1797,7 @@ struct FirstMenuStepView: View {
                                                 .font(.system(size: 20, weight: .semibold))
                                                 .foregroundStyle(.black)
 
-                                            Text("Dodaj zdjęcie")
+                                            Text(OnboardingText.t("onboarding.first_menu.add_photo"))
                                                 .font(.wix(13, wixWeight: .semiBold))
                                                 .foregroundStyle(.black)
                                         }
@@ -1253,15 +1808,15 @@ struct FirstMenuStepView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Zdjęcie pozycji")
+                                Text(OnboardingText.t("onboarding.first_menu.item_photo"))
                                     .font(.wix(17, wixWeight: .semiBold))
                                     .foregroundStyle(.black)
 
-                                Text("Klienci zobaczą je na stronie menu")
+                                Text(OnboardingText.t("onboarding.first_menu.item_photo_subtitle"))
                                     .font(.wix(14, wixWeight: .regular))
                                     .foregroundStyle(.black.opacity(0.58))
 
-                                Text("Opcjonalne")
+                                Text(OnboardingText.t(OnboardingText.optional))
                                     .font(.wix(12, wixWeight: .semiBold))
                                     .foregroundStyle(.black.opacity(0.42))
                                     .padding(.horizontal, 10)
@@ -1279,16 +1834,28 @@ struct FirstMenuStepView: View {
                     }
                     .buttonStyle(.plain)
 
-                    LMInputField(title: "Nazwa pozycji", text: $firstItemName)
-                    LMInputField(title: "Opis pozycji", text: $firstItemDescription)
-                    LMInputField(title: "Cena", text: $firstItemPrice, keyboard: .decimalPad)
+                    LMInputField(
+                        title: OnboardingText.t("onboarding.first_menu.field.item_name"),
+                        text: $firstItemName
+                    )
+
+                    LMInputField(
+                        title: OnboardingText.t("onboarding.first_menu.field.item_description"),
+                        text: $firstItemDescription
+                    )
+
+                    LMInputField(
+                        title: OnboardingText.t("onboarding.first_menu.field.price"),
+                        text: $firstItemPrice,
+                        keyboard: .decimalPad
+                    )
                 }
             }
 
             LMInfoCard(
                 icon: "sparkles",
-                title: "Dobry start",
-                subtitle: "Po zakończeniu dodasz kolejne kategorie, więcej pozycji i więcej zdjęć"
+                title: OnboardingText.t("onboarding.first_menu.info.title"),
+                subtitle: OnboardingText.t("onboarding.first_menu.info.subtitle")
             )
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -1297,13 +1864,42 @@ struct FirstMenuStepView: View {
 
 struct FinishStepView: View {
     let draft: OnboardingDraft
+    let publicDomain: String
     let logoImageData: Data?
+
+    private var yesText: String {
+        OnboardingText.t(OnboardingText.yes)
+    }
+
+    private var noText: String {
+        OnboardingText.t(OnboardingText.no)
+    }
+
+    private var enabledText: String {
+        OnboardingText.t(OnboardingText.enabled)
+    }
+
+    private var disabledText: String {
+        OnboardingText.t(OnboardingText.disabled)
+    }
+
+    private var emptyText: String {
+        OnboardingText.t(OnboardingText.emptyDash)
+    }
+
+    private var currencyText: String {
+        draft.publicCurrency
+    }
+
+    private var minutesText: String {
+        OnboardingText.t(OnboardingText.minutesShort)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             LMHeroCard(
-                title: "Wszystko gotowe",
-                subtitle: "Sprawdź najważniejsze dane przed utworzeniem panelu"
+                title: OnboardingText.t("onboarding.finish.hero.title"),
+                subtitle: OnboardingText.t("onboarding.finish.hero.subtitle")
             ) {
                 EmptyView()
             }
@@ -1312,7 +1908,7 @@ struct FinishStepView: View {
                let uiImage = UIImage(data: logoImageData) {
                 LMCard {
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("Logo")
+                        Text(OnboardingText.t("onboarding.finish.logo"))
                             .font(.wix(20, wixWeight: .bold))
                             .foregroundStyle(.black)
 
@@ -1326,67 +1922,67 @@ struct FinishStepView: View {
             }
 
             summaryCard(
-                title: "Lokal",
+                title: OnboardingText.t("onboarding.finish.section.venue"),
                 rows: [
-                    ("Nazwa", draft.businessName),
-                    ("Adres", draft.address),
-                    ("Telefon", draft.phone.trimmed.isEmpty ? "—" : draft.phone)
+                    (OnboardingText.t("onboarding.finish.row.name"), draft.businessName),
+                    (OnboardingText.t("onboarding.finish.row.address"), draft.address),
+                    (OnboardingText.t("onboarding.finish.row.phone"), draft.phone.trimmed.isEmpty ? emptyText : draft.phone)
                 ]
             )
 
             summaryCard(
-                title: "Link publiczny",
+                title: OnboardingText.t("onboarding.finish.section.public_link"),
                 rows: [
-                    ("Link", "lamenu.pl/\(draft.username.slugified)")
+                    (OnboardingText.t("onboarding.finish.row.link"), "\(publicDomain)/\(draft.username.slugified)")
                 ]
             )
 
             summaryCard(
-                title: "Kolor marki",
+                title: OnboardingText.t("onboarding.finish.section.brand_color"),
                 rows: [
-                    ("Kolor", draft.accentColorHex.uppercased())
+                    (OnboardingText.t("onboarding.finish.row.color"), draft.accentColorHex.uppercased())
                 ]
             )
 
             summaryCard(
-                title: "Dane prawne",
+                title: OnboardingText.t("onboarding.finish.section.legal"),
                 rows: [
-                    ("Firma", draft.legalBusinessName),
-                    ("NIP", draft.nip.trimmed.isEmpty ? "—" : draft.nip),
-                    ("Adres", legalAddressSummary),
-                    ("E-mail", draft.contactEmail),
-                    ("Telefon", draft.contactPhone)
+                    (OnboardingText.t("onboarding.finish.row.company"), draft.legalBusinessName),
+                    (OnboardingText.t("onboarding.finish.row.nip"), draft.nip.trimmed.isEmpty ? emptyText : draft.nip),
+                    (OnboardingText.t("onboarding.finish.row.address"), legalAddressSummary),
+                    (OnboardingText.t("onboarding.finish.row.email"), draft.contactEmail),
+                    (OnboardingText.t("onboarding.finish.row.phone"), draft.contactPhone)
                 ]
             )
 
             summaryCard(
-                title: "Realizacja i płatność",
+                title: OnboardingText.t("onboarding.finish.section.fulfillment_payment"),
                 rows: [
-                    ("Odbiór", draft.pickupAvailable ? "Tak" : "Nie"),
-                    ("Dostawa", draft.deliveryAvailable ? "Tak" : "Nie"),
-                    ("Obszar dostawy", draft.deliveryAvailable ? draft.deliveryArea : "—"),
-                    ("Cena dostawy / 1 km", draft.deliveryAvailable ? "\(draft.deliveryPricePerKm) zł" : "—"),
-                    ("Gotówka", draft.cashPaymentAvailable ? "Tak" : "Nie"),
-                    ("Karta", draft.cardPaymentAvailable ? "Tak" : "Nie"),
-                    ("BLIK", draft.blikPaymentAvailable ? "Tak" : "Nie")
+                    (OnboardingText.t("onboarding.finish.row.pickup"), draft.pickupAvailable ? yesText : noText),
+                    (OnboardingText.t("onboarding.finish.row.delivery"), draft.deliveryAvailable ? yesText : noText),
+                    (OnboardingText.t("onboarding.finish.row.delivery_area"), draft.deliveryAvailable ? draft.deliveryArea : emptyText),
+                    (OnboardingText.t("onboarding.finish.row.delivery_price_per_km"), draft.deliveryAvailable ? "\(draft.deliveryPricePerKm) \(currencyText)" : emptyText),
+                    (OnboardingText.t("onboarding.finish.row.cash"), draft.cashPaymentAvailable ? yesText : noText),
+                    (OnboardingText.t("onboarding.finish.row.card"), draft.cardPaymentAvailable ? yesText : noText),
+                    (OnboardingText.t("onboarding.finish.row.blik"), draft.blikPaymentAvailable ? yesText : noText)
                 ]
             )
 
             summaryCard(
-                title: "Przyjmowanie zamówień",
+                title: OnboardingText.t("onboarding.finish.section.orders"),
                 rows: [
-                    ("Status", draft.isAcceptingOrders ? "Włączone" : "Wyłączone"),
-                    ("SMS", draft.smsConfirmationEnabled ? "Włączone" : "Wyłączone"),
-                    ("Sloty", "\(draft.slotIntervalMinutes) min")
+                    (OnboardingText.t("onboarding.finish.row.status"), draft.isAcceptingOrders ? enabledText : disabledText),
+                    (OnboardingText.t("onboarding.finish.row.sms"), draft.smsConfirmationEnabled ? enabledText : disabledText),
+                    (OnboardingText.t("onboarding.finish.row.slots"), "\(draft.slotIntervalMinutes) \(minutesText)")
                 ]
             )
 
             summaryCard(
-                title: "Pierwsza kategoria i pozycja",
+                title: OnboardingText.t("onboarding.finish.section.first_menu"),
                 rows: [
-                    ("Kategoria", draft.categoryName),
-                    ("Pozycja", draft.firstItemName),
-                    ("Cena", "\(draft.firstItemPrice) zł")
+                    (OnboardingText.t("onboarding.finish.row.category"), draft.categoryName),
+                    (OnboardingText.t("onboarding.finish.row.item"), draft.firstItemName),
+                    (OnboardingText.t("onboarding.finish.row.price"), "\(draft.firstItemPrice) \(currencyText)")
                 ]
             )
         }
@@ -1688,6 +2284,7 @@ extension Color {
 
     func toHexString() -> String? {
         let uiColor = UIColor(self)
+
         var red: CGFloat = 0
         var green: CGFloat = 0
         var blue: CGFloat = 0

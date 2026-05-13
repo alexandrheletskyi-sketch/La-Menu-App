@@ -2,13 +2,19 @@ import SwiftUI
 import AuthenticationServices
 import CryptoKit
 import UIKit
+import Security
 
 struct LoginView: View {
     @Environment(AuthViewModel.self) private var auth
 
     @State private var email = ""
     @State private var password = ""
+
+    // false = перший екран буде Login
+    // true = екран створення профілю
     @State private var isSignUpMode = false
+
+    @State private var isPasswordVisible = false
     @State private var currentNonce: String?
     @State private var appleSignInCoordinator: AppleSignInCoordinator?
 
@@ -73,7 +79,7 @@ struct LoginView: View {
 
     private var headerSection: some View {
         VStack(spacing: 14) {
-            Text(isSignUpMode ? "Stwórz swój profil" : "Wejdź do swojego profilu")
+            Text(isSignUpMode ? "Stwórz swój profil" : "Zaloguj się")
                 .font(.wix(34, weight: .bold))
                 .foregroundStyle(.black)
                 .multilineTextAlignment(.center)
@@ -81,8 +87,8 @@ struct LoginView: View {
 
             Text(
                 isSignUpMode
-                ? "Załóż konto i zarządzaj swoim menu w jednym miejscu"
-                : "Zaloguj się i zarządzaj swoim menu w jednym miejscu"
+                ? "Załóż konto i zacznij zarządzać swoim menu online"
+                : "Wejdź do swojego profilu i zarządzaj lokalem w jednym miejscu"
             )
             .font(.wix(17, weight: .medium))
             .foregroundStyle(mutedText)
@@ -137,22 +143,58 @@ struct LoginView: View {
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity, alignment: .center)
 
-                SecureField(
-                    "",
-                    text: $password,
-                    prompt: Text("Wpisz hasło")
-                        .font(.wix(18, weight: .medium))
-                        .foregroundColor(Color.black.opacity(0.22))
-                )
-                .font(.wix(18, weight: .medium))
-                .foregroundColor(.black)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
-                .frame(height: 64)
-                .background(fieldColor)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                passwordField
             }
         }
+    }
+
+    private var passwordField: some View {
+        HStack(spacing: 10) {
+            Group {
+                if isPasswordVisible {
+                    TextField(
+                        "",
+                        text: $password,
+                        prompt: Text("Wpisz hasło")
+                            .font(.wix(18, weight: .medium))
+                            .foregroundColor(Color.black.opacity(0.22))
+                    )
+                } else {
+                    SecureField(
+                        "",
+                        text: $password,
+                        prompt: Text("Wpisz hasło")
+                            .font(.wix(18, weight: .medium))
+                            .foregroundColor(Color.black.opacity(0.22))
+                    )
+                }
+            }
+            .font(.wix(18, weight: .medium))
+            .foregroundColor(.black)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .multilineTextAlignment(.center)
+
+            if !password.isEmpty {
+                Button {
+                    isPasswordVisible.toggle()
+                } label: {
+                    Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.black.opacity(0.45))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isPasswordVisible ? "Ukryj hasło" : "Pokaż hasło")
+                .transition(.opacity.combined(with: .scale))
+            }
+        }
+        .padding(.leading, 20)
+        .padding(.trailing, password.isEmpty ? 20 : 16)
+        .frame(height: 64)
+        .background(fieldColor)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .animation(.easeInOut(duration: 0.15), value: password.isEmpty)
     }
 
     @ViewBuilder
@@ -232,6 +274,8 @@ struct LoginView: View {
         Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 isSignUpMode.toggle()
+                isPasswordVisible = false
+                auth.errorMessage = nil
             }
         } label: {
             Text(isSignUpMode ? "Masz już konto? Zaloguj się" : "Nie masz konta? Stwórz profil")
@@ -240,6 +284,7 @@ struct LoginView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
         }
+        .buttonStyle(.plain)
     }
 
     private func startSignInWithApple() {
@@ -328,11 +373,17 @@ final class AppleSignInCoordinator: NSObject, ASAuthorizationControllerDelegate,
             .first(where: \.isKeyWindow) ?? UIWindow()
     }
 
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithAuthorization authorization: ASAuthorization
+    ) {
         onCompletion(.success(authorization))
     }
 
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithError error: Error
+    ) {
         onCompletion(.failure(error))
     }
 }
@@ -407,6 +458,7 @@ extension Color {
         Scanner(string: hex).scanHexInt64(&int)
 
         let a, r, g, b: UInt64
+
         switch hex.count {
         case 3:
             (a, r, g, b) = (
@@ -415,6 +467,7 @@ extension Color {
                 (int >> 4 & 0xF) * 17,
                 (int & 0xF) * 17
             )
+
         case 6:
             (a, r, g, b) = (
                 255,
@@ -422,6 +475,7 @@ extension Color {
                 int >> 8 & 0xFF,
                 int & 0xFF
             )
+
         case 8:
             (a, r, g, b) = (
                 int >> 24,
@@ -429,6 +483,7 @@ extension Color {
                 int >> 8 & 0xFF,
                 int & 0xFF
             )
+
         default:
             (a, r, g, b) = (255, 0, 0, 0)
         }

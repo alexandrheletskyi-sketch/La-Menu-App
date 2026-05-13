@@ -33,13 +33,13 @@ struct OrdersView: View {
         var title: String {
             switch self {
             case .today:
-                return "Dzisiaj"
+                return String(localized: "Dzisiaj")
             case .all:
-                return "Wszystkie"
+                return String(localized: "Wszystkie")
             case .new:
-                return "Nowe"
+                return String(localized: "Nowe")
             case .ready:
-                return "Gotowe"
+                return String(localized: "Gotowe")
             }
         }
     }
@@ -55,9 +55,9 @@ struct OrdersView: View {
                         content(profileID: profileID)
                     } else {
                         ContentUnavailableView(
-                            "Brak profilu",
+                            String(localized: "Brak profilu"),
                             systemImage: "cart.badge.questionmark",
-                            description: Text("Nie udało się odczytać profilu")
+                            description: Text(String(localized: "Nie udało się odczytać profilu"))
                         )
                     }
                 }
@@ -104,13 +104,13 @@ struct OrdersView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Zamówienia")
+                Text(String(localized: "Zamówienia"))
                     .font(.custom("WixMadeforDisplay-Bold", size: 44))
                     .foregroundStyle(.black)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
 
-                Text("Monitoruj zamówienia, aktualizuj statusy i obsługuj klientów z jednego miejsca")
+                Text(String(localized: "Monitoruj zamówienia, aktualizuj statusy i obsługuj klientów z jednego miejsca"))
                     .font(.custom("WixMadeforDisplay-Regular", size: 17))
                     .foregroundStyle(mutedText)
                     .lineSpacing(2)
@@ -138,7 +138,7 @@ struct OrdersView: View {
             ProgressView()
                 .scaleEffect(0.72)
 
-            Text("Odświeżanie")
+            Text(String(localized: "Odświeżanie"))
                 .font(.custom("WixMadeforDisplay-Medium", size: 13))
         }
         .foregroundStyle(mutedText)
@@ -179,7 +179,7 @@ struct OrdersView: View {
             emojiBubble("⚠️")
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Wystąpił problem")
+                Text(String(localized: "Wystąpił problem"))
                     .font(.custom("WixMadeforDisplay-SemiBold", size: 17))
                     .foregroundStyle(.black)
 
@@ -199,7 +199,7 @@ struct OrdersView: View {
         HStack(spacing: 12) {
             ProgressView()
 
-            Text("Ładowanie zamówień...")
+            Text(String(localized: "Ładowanie zamówień..."))
                 .font(.custom("WixMadeforDisplay-Regular", size: 16))
                 .foregroundStyle(mutedText)
         }
@@ -237,7 +237,7 @@ struct OrdersView: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(order.customerName?.isEmpty == false ? order.customerName! : "Bez imienia")
+                    Text(order.customerName?.isEmpty == false ? order.customerName! : String(localized: "Bez imienia"))
                         .font(.custom("WixMadeforDisplay-Bold", size: 27))
                         .foregroundStyle(.black)
                         .lineLimit(1)
@@ -255,7 +255,7 @@ struct OrdersView: View {
                 Spacer(minLength: 12)
 
                 VStack(alignment: .trailing, spacing: 10) {
-                    Text("\(Int(order.totalAmount)) zł")
+                    Text(String(format: String(localized: "%.0f zł"), order.totalAmount))
                         .font(.custom("WixMadeforDisplay-Bold", size: 16))
                         .foregroundStyle(.black)
                         .padding(.horizontal, 13)
@@ -274,21 +274,33 @@ struct OrdersView: View {
                 let itemsText = viewModel.itemsText(for: order)
 
                 if !itemsText.isEmpty {
-                    orderDetailRow(emoji: "🛒", title: "Produkty", value: itemsText)
+                    orderDetailRow(
+                        emoji: "🛒",
+                        title: String(localized: "Produkty"),
+                        value: itemsText
+                    )
                 }
 
                 if let phone = order.customerPhone, !phone.isEmpty {
-                    orderDetailRow(emoji: "📞", title: "Telefon", value: phone)
+                    orderDetailRow(
+                        emoji: "📞",
+                        title: String(localized: "Telefon"),
+                        value: phone
+                    )
                 }
 
                 orderDetailRow(
                     emoji: order.fulfillmentType == "pickup" ? "🏪" : "🚗",
-                    title: "Sposób odbioru",
+                    title: String(localized: "Sposób odbioru"),
                     value: displayFulfillmentType(order.fulfillmentType)
                 )
 
                 if let pickupTime = order.pickupTime, !pickupTime.isEmpty {
-                    orderDetailRow(emoji: "⏰", title: "Godzina odbioru", value: pickupTime)
+                    orderDetailRow(
+                        emoji: "⏰",
+                        title: String(localized: "Godzina odbioru"),
+                        value: pickupTime
+                    )
                 }
             }
 
@@ -296,13 +308,13 @@ struct OrdersView: View {
                 .background(Color.black.opacity(0.06))
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Zmień status")
+                Text(String(localized: "Zmień status"))
                     .font(.custom("WixMadeforDisplay-Medium", size: 14))
                     .foregroundStyle(mutedText)
 
                 HStack(spacing: 10) {
                     statusActionButton(
-                        title: "Nowe",
+                        title: String(localized: "Nowe"),
                         statusValue: "new",
                         currentStatus: order.status,
                         activeBackground: accentGreen,
@@ -314,7 +326,7 @@ struct OrdersView: View {
                     }
 
                     statusActionButton(
-                        title: "Przyjęte",
+                        title: String(localized: "Przyjęte"),
                         statusValue: "accepted",
                         currentStatus: order.status,
                         activeBackground: accentYellow,
@@ -326,7 +338,7 @@ struct OrdersView: View {
                     }
 
                     statusActionButton(
-                        title: "Gotowe",
+                        title: String(localized: "Gotowe"),
                         statusValue: "ready",
                         currentStatus: order.status,
                         activeBackground: accentOrange,
@@ -448,26 +460,26 @@ struct OrdersView: View {
     private var emptyStateTitle: String {
         switch selectedFilter {
         case .today:
-            return "Brak zamówień dzisiaj"
+            return String(localized: "Brak zamówień dzisiaj")
         case .all:
-            return "Brak zamówień"
+            return String(localized: "Brak zamówień")
         case .new:
-            return "Brak nowych zamówień"
+            return String(localized: "Brak nowych zamówień")
         case .ready:
-            return "Brak gotowych zamówień"
+            return String(localized: "Brak gotowych zamówień")
         }
     }
 
     private var emptyStateSubtitle: String {
         switch selectedFilter {
         case .today:
-            return "Dzisiejsze zamówienia pojawią się tutaj automatycznie"
+            return String(localized: "Dzisiejsze zamówienia pojawią się tutaj automatycznie")
         case .all:
-            return "Nowe zamówienia pojawią się tutaj automatycznie"
+            return String(localized: "Nowe zamówienia pojawią się tutaj automatycznie")
         case .new:
-            return "Nowe zamówienia pojawią się tutaj, gdy klient złoży zamówienie"
+            return String(localized: "Nowe zamówienia pojawią się tutaj, gdy klient złoży zamówienie")
         case .ready:
-            return "Zamówienia oznaczone jako gotowe pojawią się tutaj"
+            return String(localized: "Zamówienia oznaczone jako gotowe pojawią się tutaj")
         }
     }
 
@@ -498,19 +510,21 @@ struct OrdersView: View {
     }
 
     private func displayFulfillmentType(_ type: String) -> String {
-        type.lowercased() == "pickup" ? "Odbiór osobisty" : "Dostawa"
+        type.lowercased() == "pickup"
+            ? String(localized: "Odbiór osobisty")
+            : String(localized: "Dostawa")
     }
 
     private func displayStatus(_ status: String) -> String {
         switch status.lowercased() {
         case "new":
-            return "Nowe"
+            return String(localized: "Nowe")
         case "accepted":
-            return "Przyjęte"
+            return String(localized: "Przyjęte")
         case "ready":
-            return "Gotowe"
+            return String(localized: "Gotowe")
         case "done":
-            return "Zakończone"
+            return String(localized: "Zakończone")
         default:
             return status
         }
@@ -548,7 +562,7 @@ struct OrdersView: View {
 
     private func formatHeaderDate(_ raw: String) -> String {
         let output = DateFormatter()
-        output.locale = Locale(identifier: "pl_PL")
+        output.locale = Locale.current
         output.dateStyle = .medium
         output.timeStyle = .short
 

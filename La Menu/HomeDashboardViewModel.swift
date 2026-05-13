@@ -58,6 +58,9 @@ final class HomeDashboardViewModel {
         defer { isLoading = false }
 
         do {
+            print("========== HOME DASHBOARD DEBUG START ==========")
+            print("DEBUG userId:", userId.uuidString)
+
             let profiles: [Profile] = try await SupabaseManager.shared
                 .from("profiles")
                 .select()
@@ -67,6 +70,8 @@ final class HomeDashboardViewModel {
                 .value
 
             guard let profile = profiles.first else {
+                print("DEBUG no profile found")
+
                 self.profile = nil
                 self.mainMenu = nil
                 self.ordersTodayCount = 0
@@ -74,8 +79,13 @@ final class HomeDashboardViewModel {
                 self.recentOrders = []
                 self.orderItemsByOrderId = [:]
                 self.isWithinWorkingHours = false
+
+                print("========== HOME DASHBOARD DEBUG END ==========")
                 return
             }
+
+            print("DEBUG profile id:", profile.id.uuidString)
+            print("DEBUG profile business:", profile.businessName)
 
             self.profile = profile
 
@@ -98,39 +108,60 @@ final class HomeDashboardViewModel {
                 .execute()
                 .value
 
+            print("DEBUG dashboard orders count:", allOrders.count)
+
             let todayPrefix = Self.todayDatePrefix()
             let todayOrders = allOrders.filter { $0.createdAt.hasPrefix(todayPrefix) }
 
             self.ordersTodayCount = todayOrders.count
             self.revenueToday = todayOrders.reduce(0) { $0 + $1.totalAmount }
 
-            // Тут залишаємо всі замовлення, бо HomeDashboardView сам фільтрує:
-            // - сьогоднішні
-            // - всі
-            // - приховує ready/done з дашборду
             self.recentOrders = allOrders
 
             let orderIds = allOrders.map { $0.id.uuidString }
+            print("DEBUG dashboard orderIds:", orderIds)
 
             if !orderIds.isEmpty {
                 let allItems: [OrderItem] = try await SupabaseManager.shared
                     .from("order_items")
-                    .select()
+                    .select("id, order_id, menu_item_id, name, quantity, unit_price, line_total, created_at")
                     .in("order_id", values: orderIds)
+                    .order("created_at", ascending: true)
                     .execute()
                     .value
 
+                print("DEBUG dashboard order_items count:", allItems.count)
+
+                for item in allItems {
+                    print("""
+                    DEBUG dashboard item:
+                    - id: \(item.id.uuidString)
+                    - order_id: \(item.orderId.uuidString)
+                    - name: \(item.name)
+                    - quantity: \(item.quantity)
+                    - unit_price: \(item.unitPrice)
+                    - line_total: \(item.lineTotal)
+                    """)
+                }
+
                 self.orderItemsByOrderId = Dictionary(grouping: allItems, by: { $0.orderId })
+
+                print("DEBUG dashboard grouped item keys:", self.orderItemsByOrderId.keys.map { $0.uuidString })
             } else {
                 self.orderItemsByOrderId = [:]
+                print("DEBUG dashboard no order items to load")
             }
 
-            // Tymczasowo:
-            // jeśli ręczne przyjmowanie jest włączone, pokazujemy lokal jako aktywny
-            // później możesz tu wstawić realne wyliczenie na podstawie godzin pracy
             self.isWithinWorkingHours = true
 
+            print("========== HOME DASHBOARD DEBUG END ==========")
+
         } catch {
+            print("========== HOME DASHBOARD DEBUG ERROR ==========")
+            print("DEBUG error:", error)
+            print("DEBUG localizedDescription:", error.localizedDescription)
+            print("==============================================")
+
             errorMessage = error.localizedDescription
         }
     }
@@ -203,8 +234,8 @@ final class HomeDashboardViewModel {
     func itemsText(for order: Order) -> String {
         let items = orderItemsByOrderId[order.id] ?? []
 
-        return items.map {
-            "\($0.name) x\($0.quantity) - \(Int($0.lineTotal)) zł"
+        return items.map { item in
+            "\(item.quantity)x \(item.name) — \(Int(item.lineTotal)) zł"
         }
         .joined(separator: "\n")
     }

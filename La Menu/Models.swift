@@ -19,6 +19,9 @@ struct Profile: Codable, Identifiable, Hashable {
     var pickupEnabled: Bool
     var deliveryEnabled: Bool
     var accentColor: String?
+    var publicCountry: String?
+    var publicLanguage: String?
+    var publicCurrency: String?
     var slotIntervalMinutes: Int?
     var deliveryPricePerKm: Double?
     var smsConfirmationEnabled: Bool
@@ -50,6 +53,9 @@ struct Profile: Codable, Identifiable, Hashable {
         case pickupEnabled = "pickup_enabled"
         case deliveryEnabled = "delivery_enabled"
         case accentColor = "accent_color"
+        case publicCountry = "public_country"
+        case publicLanguage = "public_language"
+        case publicCurrency = "public_currency"
         case slotIntervalMinutes = "slot_interval_minutes"
         case deliveryPricePerKm = "delivery_price_per_km"
         case smsConfirmationEnabled = "sms_confirmation_enabled"
@@ -88,6 +94,31 @@ struct Profile: Codable, Identifiable, Hashable {
 
     var subscriptionDescription: String {
         subscriptionPlan.shortDescription
+    }
+
+    var displayPublicCountry: String {
+        publicCountry ?? "pl"
+    }
+
+    var displayPublicLanguage: String {
+        publicLanguage ?? "pl"
+    }
+
+    var displayPublicCurrency: String {
+        publicCurrency ?? "PLN"
+    }
+
+    var displayPublicDomain: String {
+        switch displayPublicCountry {
+        case "uk":
+            return "lamenu.uk"
+        default:
+            return "lamenu.pl"
+        }
+    }
+
+    var displayPublicURL: String {
+        "\(displayPublicDomain)/\(username)"
     }
 }
 
@@ -147,7 +178,7 @@ struct OrderItem: Codable, Identifiable, Hashable {
     var quantity: Int
     var unitPrice: Double
     var lineTotal: Double
-    var createdAt: String
+    var createdAt: String?
 
     enum CodingKeys: String, CodingKey {
         case id

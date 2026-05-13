@@ -191,8 +191,9 @@ struct AddMenuItemSheet: View {
             .sheet(isPresented: $showPlansView) {
                 NavigationStack {
                     PlansView(
+                        profileId: profile.id,
                         currentPlan: currentPlan,
-                        currentSmsCredits: profile.currentSmsCredits ?? 0
+                        currentSmsCredits: profile.currentSmsCredits ?? profile.smsCredits ?? 0
                     )
                 }
             }

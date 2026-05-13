@@ -44,4 +44,35 @@ enum SupabaseManager {
             .execute()
             .value
     }
+
+    static func activateSubscriptionForCurrentProfile(
+        planCode: String,
+        provider: String = "apple",
+        providerProductId: String
+    ) async throws {
+        do {
+            let session = try await shared.auth.session
+
+            print("👤 Supabase current user:", session.user.id.uuidString)
+            print("📦 Activating plan:", planCode)
+            print("🧾 Product ID:", providerProductId)
+
+            let params: [String: String] = [
+                "p_plan_code": planCode,
+                "p_provider": provider,
+                "p_provider_product_id": providerProductId
+            ]
+
+            try await shared
+                .rpc("activate_subscription_for_current_profile", params: params)
+                .execute()
+
+            print("✅ RPC activate_subscription_for_current_profile completed:", params)
+        } catch {
+            print("❌ RPC activate_subscription_for_current_profile failed:")
+            print(error)
+            print("❌ localized:", error.localizedDescription)
+            throw error
+        }
+    }
 }

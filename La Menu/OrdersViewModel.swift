@@ -83,7 +83,7 @@ final class OrdersViewModel {
 
             let loadedItems: [OrderItem] = try await SupabaseManager.shared
                 .from("order_items")
-                .select()
+                .select("id, order_id, menu_item_id, name, quantity, unit_price, line_total, created_at")
                 .in("order_id", values: orderIds)
                 .order("created_at", ascending: true)
                 .execute()
@@ -98,6 +98,7 @@ final class OrdersViewModel {
                 - order_id: \(item.orderId.uuidString)
                 - name: \(item.name)
                 - quantity: \(item.quantity)
+                - unit_price: \(item.unitPrice)
                 - line_total: \(item.lineTotal)
                 """)
             }
@@ -161,8 +162,8 @@ final class OrdersViewModel {
     func itemsText(for order: Order) -> String {
         let items = items(for: order)
 
-        return items.map {
-            "\($0.name) x\($0.quantity) - \(Int($0.lineTotal)) zł"
+        return items.map { item in
+            "\(item.quantity)x \(item.name) — \(Int(item.lineTotal)) zł"
         }
         .joined(separator: "\n")
     }

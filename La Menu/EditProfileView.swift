@@ -9,6 +9,11 @@ struct EditProfileView: View {
 
     @State private var accentHex: String = "#FF0043"
     @State private var selectedColor: Color = Color(red: 1, green: 0, blue: 67 / 255)
+
+    @State private var selectedLanguageCode: String = "pl"
+    @State private var selectedCurrencyCode: String = "PLN"
+
+    @State private var isLoading = false
     @State private var isSaving = false
 
     private let pageBackground = Color.white
@@ -23,31 +28,48 @@ struct EditProfileView: View {
         "#8B5CF6"
     ]
 
+    private let languageOptions: [PublicLanguageOption] = [
+        .init(code: "pl", title: "Polski", subtitle: "Język polski", flag: "🇵🇱"),
+        .init(code: "en", title: "English", subtitle: "English language", flag: "🇬🇧")
+    ]
+
+    private let currencyOptions: [PublicCurrencyOption] = [
+        .init(code: "PLN", title: "Polski złoty", subtitle: "zł", flag: "🇵🇱"),
+        .init(code: "GBP", title: "British pound", subtitle: "£", flag: "🇬🇧"),
+        .init(code: "EUR", title: "Euro", subtitle: "€", flag: "🇪🇺"),
+        .init(code: "USD", title: "US dollar", subtitle: "$", flag: "🇺🇸")
+    ]
+
     var body: some View {
         NavigationStack {
             ZStack {
                 pageBackground
                     .ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 24) {
-                        headerSection
-                        colorPreviewCard
-                        colorPickerCard
-                        presetColorsCard
-                        customHexCard
-                        saveCard
+                if isLoading {
+                    ProgressView()
+                        .tint(.black)
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 24) {
+                            headerSection
+                            languageCard
+                            currencyCard
+                            colorPreviewCard
+                            colorPickerCard
+                            presetColorsCard
+                            customHexCard
+                            saveCard
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
+                        .padding(.bottom, 40)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
-                    .padding(.bottom, 40)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .onAppear {
-                let normalized = normalizedHex(accentHex)
-                accentHex = normalized
-                selectedColor = colorFromHex(normalized)
+            .task {
+                await loadProfileSettings()
             }
         }
     }
@@ -55,11 +77,11 @@ struct EditProfileView: View {
     private var headerSection: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Edytuj profil")
+                Text(String(localized: "Edytuj profil"))
                     .font(.custom("WixMadeforDisplay-Bold", size: 38))
                     .foregroundStyle(.black)
 
-                Text("Tutaj możesz zmienić główny kolor swojej strony menu")
+                Text(String(localized: "Tutaj możesz zmienić język, walutę i główny kolor swojej strony menu"))
                     .font(.custom("WixMadeforDisplay-Regular", size: 16))
                     .foregroundStyle(mutedText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -81,9 +103,107 @@ struct EditProfileView: View {
         }
     }
 
+    private var languageCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(String(localized: "Język strony"))
+                .font(.custom("WixMadeforDisplay-Bold", size: 22))
+                .foregroundStyle(.black)
+
+            Text(String(localized: "Wybierz język, w którym będzie wyświetlana publiczna strona menu"))
+                .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                .foregroundStyle(mutedText)
+
+            VStack(spacing: 10) {
+                ForEach(languageOptions) { option in
+                    optionButton(
+                        flag: option.flag,
+                        title: option.title,
+                        subtitle: option.subtitle,
+                        isSelected: selectedLanguageCode == option.code
+                    ) {
+                        selectedLanguageCode = option.code
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .editProfileCardStyle()
+    }
+
+    private var currencyCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(String(localized: "Waluta strony"))
+                .font(.custom("WixMadeforDisplay-Bold", size: 22))
+                .foregroundStyle(.black)
+
+            Text(String(localized: "Ta waluta będzie pokazywana przy cenach produktów i kosztach dostawy"))
+                .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                .foregroundStyle(mutedText)
+
+            VStack(spacing: 10) {
+                ForEach(currencyOptions) { option in
+                    optionButton(
+                        flag: option.flag,
+                        title: "\(option.title) · \(option.code)",
+                        subtitle: option.subtitle,
+                        isSelected: selectedCurrencyCode == option.code
+                    ) {
+                        selectedCurrencyCode = option.code
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .editProfileCardStyle()
+    }
+
+    private func optionButton(
+        flag: String,
+        title: String,
+        subtitle: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            action()
+        } label: {
+            HStack(spacing: 14) {
+                Text(flag)
+                    .font(.system(size: 30))
+                    .frame(width: 46, height: 46)
+                    .background(Color.black.opacity(0.04))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.custom("WixMadeforDisplay-SemiBold", size: 17))
+                        .foregroundStyle(.black)
+
+                    Text(subtitle)
+                        .font(.custom("WixMadeforDisplay-Regular", size: 13))
+                        .foregroundStyle(mutedText)
+                }
+
+                Spacer()
+
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(isSelected ? selectedColor : Color.black.opacity(0.18))
+            }
+            .padding(14)
+            .background(isSelected ? selectedColor.opacity(0.10) : Color.black.opacity(0.035))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isSelected ? selectedColor.opacity(0.45) : Color.black.opacity(0.06), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
     private var colorPreviewCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Podgląd koloru")
+            Text(String(localized: "Podgląd koloru"))
                 .font(.custom("WixMadeforDisplay-Bold", size: 22))
                 .foregroundStyle(.black)
 
@@ -92,7 +212,7 @@ struct EditProfileView: View {
                 .frame(height: 120)
                 .overlay(
                     VStack(spacing: 10) {
-                        Text("Twój kolor strony")
+                        Text(String(localized: "Twój kolor strony"))
                             .font(.custom("WixMadeforDisplay-Bold", size: 22))
                             .foregroundStyle(.white)
 
@@ -108,11 +228,11 @@ struct EditProfileView: View {
 
     private var colorPickerCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Wybierz dowolny kolor")
+            Text(String(localized: "Wybierz dowolny kolor"))
                 .font(.custom("WixMadeforDisplay-Bold", size: 22))
                 .foregroundStyle(.black)
 
-            Text("Możesz wybrać dowolny kolor i od razu zobaczyć efekt")
+            Text(String(localized: "Możesz wybrać dowolny kolor i od razu zobaczyć efekt"))
                 .font(.custom("WixMadeforDisplay-Regular", size: 14))
                 .foregroundStyle(mutedText)
 
@@ -136,7 +256,7 @@ struct EditProfileView: View {
 
     private var presetColorsCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Gotowe kolory")
+            Text(String(localized: "Gotowe kolory"))
                 .font(.custom("WixMadeforDisplay-Bold", size: 22))
                 .foregroundStyle(.black)
 
@@ -176,11 +296,11 @@ struct EditProfileView: View {
 
     private var customHexCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Własny kolor")
+            Text(String(localized: "Własny kolor"))
                 .font(.custom("WixMadeforDisplay-Bold", size: 22))
                 .foregroundStyle(.black)
 
-            Text("Wpisz kolor w formacie hex, na przykład #FF0043")
+            Text(String(localized: "Wpisz kolor w formacie hex, na przykład #FF0043"))
                 .font(.custom("WixMadeforDisplay-Regular", size: 14))
                 .foregroundStyle(mutedText)
 
@@ -212,10 +332,10 @@ struct EditProfileView: View {
         VStack(alignment: .leading, spacing: 14) {
             Button {
                 Task {
-                    await saveAccentColor()
+                    await saveProfileSettings()
                 }
             } label: {
-                Text(isSaving ? "Zapisywanie..." : "Zapisz zmiany")
+                Text(isSaving ? String(localized: "Zapisywanie...") : String(localized: "Zapisz zmiany"))
                     .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -226,7 +346,7 @@ struct EditProfileView: View {
             .buttonStyle(.plain)
             .disabled(isSaving)
 
-            Text("Po zapisaniu ten kolor będzie używany na stronie menu")
+            Text(String(localized: "Po zapisaniu ustawienia będą używane na publicznej stronie menu"))
                 .font(.custom("WixMadeforDisplay-Regular", size: 13))
                 .foregroundStyle(mutedText)
         }
@@ -246,8 +366,49 @@ struct EditProfileView: View {
         )
     }
 
-    private func saveAccentColor() async {
+    private func loadProfileSettings() async {
+        guard let profileId = auth.profile?.id else {
+            let normalized = normalizedHex(accentHex)
+            accentHex = normalized
+            selectedColor = colorFromHex(normalized)
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let response: PostgrestResponse<[EditProfileSettingsRow]> = try await SupabaseManager.shared
+                .from("profiles")
+                .select("accent_color, public_language, public_currency")
+                .eq("id", value: profileId.uuidString)
+                .limit(1)
+                .execute()
+
+            if let row = response.value.first {
+                let loadedAccent = normalizedHex(row.accentColor ?? "#FF0043")
+                accentHex = loadedAccent
+                selectedColor = colorFromHex(loadedAccent)
+
+                let loadedLanguage = String(row.publicLanguage ?? "pl").lowercased()
+                selectedLanguageCode = languageOptions.contains(where: { $0.code == loadedLanguage }) ? loadedLanguage : "pl"
+
+                let loadedCurrency = String(row.publicCurrency ?? "PLN").uppercased()
+                selectedCurrencyCode = currencyOptions.contains(where: { $0.code == loadedCurrency }) ? loadedCurrency : "PLN"
+            }
+        } catch {
+            print("Load profile settings error:", error)
+
+            let normalized = normalizedHex(accentHex)
+            accentHex = normalized
+            selectedColor = colorFromHex(normalized)
+        }
+    }
+
+    private func saveProfileSettings() async {
         let finalHex = normalizedHex(accentHex)
+        let finalLanguage = selectedLanguageCode.lowercased()
+        let finalCurrency = selectedCurrencyCode.uppercased()
 
         guard let profileId = auth.profile?.id else { return }
 
@@ -258,14 +419,16 @@ struct EditProfileView: View {
             try await SupabaseManager.shared
                 .from("profiles")
                 .update([
-                    "accent_color": finalHex
+                    "accent_color": finalHex,
+                    "public_language": finalLanguage,
+                    "public_currency": finalCurrency
                 ])
                 .eq("id", value: profileId.uuidString)
                 .execute()
 
             dismiss()
         } catch {
-            print("Save accent color error:", error)
+            print("Save profile settings error:", error)
         }
     }
 
@@ -320,6 +483,36 @@ struct EditProfileView: View {
         let b = Int(round(blue * 255))
 
         return String(format: "#%02X%02X%02X", r, g, b)
+    }
+}
+
+private struct PublicLanguageOption: Identifiable {
+    let code: String
+    let title: String
+    let subtitle: String
+    let flag: String
+
+    var id: String { code }
+}
+
+private struct PublicCurrencyOption: Identifiable {
+    let code: String
+    let title: String
+    let subtitle: String
+    let flag: String
+
+    var id: String { code }
+}
+
+private struct EditProfileSettingsRow: Decodable {
+    let accentColor: String?
+    let publicLanguage: String?
+    let publicCurrency: String?
+
+    enum CodingKeys: String, CodingKey {
+        case accentColor = "accent_color"
+        case publicLanguage = "public_language"
+        case publicCurrency = "public_currency"
     }
 }
 

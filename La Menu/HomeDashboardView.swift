@@ -9,6 +9,7 @@ struct HomeDashboardView: View {
     @State private var showCopyToast = false
     @State private var showPlansView = false
     @State private var dashboardOrderFilter: DashboardOrderFilter = .today
+    @State private var dashboardRefreshID = UUID()
 
     private let pageBackground = Color.white
     private let cardBackground = Color.white
@@ -28,7 +29,7 @@ struct HomeDashboardView: View {
         case today
         case all
 
-        var title: String {
+        var title: LocalizedStringKey {
             switch self {
             case .today:
                 return "Dzisiaj"
@@ -54,6 +55,7 @@ struct HomeDashboardView: View {
 
                         } else if let profile = viewModel.profile {
                             dashboardContent(profile: profile)
+                                .id(dashboardRefreshID)
 
                         } else {
                             ContentUnavailableView(
@@ -75,13 +77,23 @@ struct HomeDashboardView: View {
             }
             .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showCopyToast)
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showPlansView) {
+            .sheet(
+                isPresented: $showPlansView,
+                onDismiss: {
+                    Task {
+                        await refreshDashboardProfile()
+                    }
+                }
+            ) {
                 if let profile = viewModel.profile {
-                    NavigationStack {
-                        PlansView(
-                            currentPlan: profile.subscriptionPlan,
-                            currentSmsCredits: profile.currentSmsCredits ?? 0
-                        )
+                    PlansView(
+                        profileId: profile.id,
+                        currentPlan: currentDashboardPlan(for: profile),
+                        currentSmsCredits: currentDashboardSmsCredits(for: profile)
+                    ) { _ in
+                        Task {
+                            await refreshDashboardProfile()
+                        }
                     }
                 }
             }
@@ -90,8 +102,12 @@ struct HomeDashboardView: View {
                 await viewModel.load(for: userId)
             }
             .refreshable {
-                guard let userId = auth.currentUserId else { return }
-                await viewModel.load(for: userId)
+                await refreshDashboardProfile()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .subscriptionPlanDidChange)) { _ in
+                Task {
+                    await refreshDashboardProfile()
+                }
             }
         }
     }
@@ -126,8 +142,10 @@ struct HomeDashboardView: View {
     private func headerSection(profile: Profile) -> some View {
         let addressText: String = {
             let value = profile.address?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return value.isEmpty ? "Adres nie został dodany" : value
+            return value.isEmpty ? String(localized: "Adres nie został dodany") : value
         }()
+
+        let displayedPlan = currentDashboardPlan(for: profile)
 
         return VStack(alignment: .leading, spacing: 14) {
             Text(profile.businessName)
@@ -146,7 +164,7 @@ struct HomeDashboardView: View {
                     .fill(viewModel.isEffectivelyAcceptingOrders ? accentGreen : Color.black.opacity(0.18))
                     .frame(width: 7, height: 7)
 
-                Text(viewModel.effectiveOrdersStatusTitle)
+                Text(LocalizedStringKey(viewModel.effectiveOrdersStatusTitle))
                     .font(.custom("WixMadeforDisplay-Medium", size: 14))
                     .foregroundStyle(.black.opacity(0.74))
                     .lineLimit(1)
@@ -160,7 +178,7 @@ struct HomeDashboardView: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(accentOrange)
 
-                    Text("Plan \(profile.subscriptionPlan.title)")
+                    Text("Plan \(displayedPlan.title)")
                         .font(.custom("WixMadeforDisplay-SemiBold", size: 14))
                         .foregroundStyle(.black)
 
@@ -303,7 +321,7 @@ struct HomeDashboardView: View {
         }
     }
 
-    private func sectionHeader(_ title: String) -> some View {
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
         Text(title)
             .font(.custom("WixMadeforDisplay-Bold", size: 32))
             .foregroundStyle(.black)
@@ -325,7 +343,7 @@ struct HomeDashboardView: View {
             androidStyleMetricBlock(
                 emoji: "💵",
                 title: "Przychód",
-                value: "\(Int(viewModel.revenueToday)) zł"
+                value: formatPrice(viewModel.revenueToday)
             )
         }
         .padding(.horizontal, 20)
@@ -342,7 +360,7 @@ struct HomeDashboardView: View {
 
     private func androidStyleMetricBlock(
         emoji: String,
-        title: String,
+        title: LocalizedStringKey,
         value: String
     ) -> some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -388,6 +406,7 @@ struct HomeDashboardView: View {
                     set: { _ in
                         Task {
                             await viewModel.toggleAcceptingOrders()
+                            await refreshDashboardProfile()
                         }
                     }
                 )
@@ -405,6 +424,7 @@ struct HomeDashboardView: View {
                     set: { _ in
                         Task {
                             await viewModel.toggleContinueAfterHours()
+                            await refreshDashboardProfile()
                         }
                     }
                 )
@@ -413,8 +433,8 @@ struct HomeDashboardView: View {
     }
 
     private func settingToggleCard(
-        title: String,
-        subtitle: String,
+        title: LocalizedStringKey,
+        subtitle: LocalizedStringKey,
         systemImage: String,
         iconColor: Color,
         isOn: Binding<Bool>
@@ -523,7 +543,7 @@ struct HomeDashboardView: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(order.customerName?.isEmpty == false ? order.customerName! : "Bez imienia")
+                    Text(order.customerName?.isEmpty == false ? order.customerName! : String(localized: "Bez imienia"))
                         .font(.custom("WixMadeforDisplay-Bold", size: 27))
                         .foregroundStyle(.black)
                         .lineLimit(1)
@@ -541,7 +561,7 @@ struct HomeDashboardView: View {
                 Spacer(minLength: 12)
 
                 VStack(alignment: .trailing, spacing: 10) {
-                    Text("\(Int(order.totalAmount)) zł")
+                    Text(formatPrice(order.totalAmount))
                         .font(.custom("WixMadeforDisplay-Bold", size: 16))
                         .foregroundStyle(.black)
                         .padding(.horizontal, 13)
@@ -652,7 +672,7 @@ struct HomeDashboardView: View {
     }
 
     private func dashboardStatusActionButton(
-        title: String,
+        title: LocalizedStringKey,
         statusValue: String,
         currentStatus: String,
         activeBackground: Color,
@@ -681,7 +701,7 @@ struct HomeDashboardView: View {
 
     private func dashboardOrderDetailRow(
         emoji: String,
-        title: String,
+        title: LocalizedStringKey,
         value: String
     ) -> some View {
         HStack(alignment: .top, spacing: 13) {
@@ -750,7 +770,7 @@ struct HomeDashboardView: View {
         dashboardOrders.filter { isTodayOrder($0) }.count
     }
 
-    private var dashboardEmptyTitle: String {
+    private var dashboardEmptyTitle: LocalizedStringKey {
         switch dashboardOrderFilter {
         case .today:
             return "Brak zamówień dzisiaj"
@@ -760,7 +780,7 @@ struct HomeDashboardView: View {
         }
     }
 
-    private var dashboardEmptySubtitle: String {
+    private var dashboardEmptySubtitle: LocalizedStringKey {
         switch dashboardOrderFilter {
         case .today:
             return "Dzisiejsze zamówienia pojawią się tutaj automatycznie"
@@ -770,8 +790,25 @@ struct HomeDashboardView: View {
         }
     }
 
+    private func currentDashboardPlan(for profile: Profile) -> SubscriptionPlan {
+        if let authProfile = auth.profile, authProfile.id == profile.id {
+            return authProfile.subscriptionPlan
+        }
+
+        return profile.subscriptionPlan
+    }
+
+    private func currentDashboardSmsCredits(for profile: Profile) -> Int {
+        if let authProfile = auth.profile, authProfile.id == profile.id {
+            return authProfile.currentSmsCredits ?? authProfile.smsCredits ?? 0
+        }
+
+        return profile.currentSmsCredits ?? profile.smsCredits ?? 0
+    }
+
     private func updateDashboardOrderStatus(orderID: UUID, status: String) async {
         await viewModel.updateStatus(orderID: orderID, status: status)
+        await refreshDashboardProfile()
     }
 
     private var seeAllButton: some View {
@@ -815,6 +852,22 @@ struct HomeDashboardView: View {
         .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 6)
     }
 
+    @MainActor
+    private func refreshDashboardProfile() async {
+        guard let userId = auth.currentUserId else { return }
+
+        await auth.loadProfileStatus()
+        await viewModel.load(for: userId)
+
+        dashboardRefreshID = UUID()
+
+        print("🔄 Dashboard refreshed")
+        print("Auth plan:", auth.profile?.subscriptionPlan.title ?? "nil")
+        print("Dashboard plan:", viewModel.profile?.subscriptionPlan.title ?? "nil")
+        print("Displayed plan:", viewModel.profile.map { currentDashboardPlan(for: $0).title } ?? "nil")
+        print("SMS credits:", viewModel.profile.map { currentDashboardSmsCredits(for: $0) } ?? -1)
+    }
+
     private func showCopiedFeedback() {
         withAnimation {
             showCopyToast = true
@@ -836,19 +889,21 @@ struct HomeDashboardView: View {
     }
 
     private func displayFulfillmentType(_ type: String) -> String {
-        type.lowercased() == "pickup" ? "Odbiór osobisty" : "Dostawa"
+        type.lowercased() == "pickup"
+            ? String(localized: "Odbiór osobisty")
+            : String(localized: "Dostawa")
     }
 
     private func displayStatus(_ status: String) -> String {
         switch status.lowercased() {
         case "new":
-            return "Nowe"
+            return String(localized: "Nowe")
         case "accepted":
-            return "Przyjęte"
+            return String(localized: "Przyjęte")
         case "ready":
-            return "Gotowe"
+            return String(localized: "Gotowe")
         case "done":
-            return "Zakończone"
+            return String(localized: "Zakończone")
         default:
             return status
         }
@@ -904,7 +959,7 @@ struct HomeDashboardView: View {
 
     private func formatOrderDate(_ raw: String) -> String {
         let output = DateFormatter()
-        output.locale = Locale(identifier: "pl_PL")
+        output.locale = .autoupdatingCurrent
         output.dateStyle = .medium
         output.timeStyle = .short
 
@@ -913,6 +968,16 @@ struct HomeDashboardView: View {
         }
 
         return raw
+    }
+
+    private func formatPrice(_ amount: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "PLN"
+        formatter.locale = .autoupdatingCurrent
+        formatter.maximumFractionDigits = 0
+
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount)) zł"
     }
 }
 

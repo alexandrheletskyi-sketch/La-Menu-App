@@ -77,6 +77,9 @@ struct OnboardingDraft: Equatable, Sendable {
     var username = ""
 
     var accentColorHex = "#FFAA00"
+    var publicCountry = "pl"
+    var publicLanguage = "pl"
+    var publicCurrency = "PLN"
 
     var legalBusinessName = ""
     var businessDisplayName = ""

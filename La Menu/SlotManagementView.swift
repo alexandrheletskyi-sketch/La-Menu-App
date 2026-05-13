@@ -42,18 +42,18 @@ struct SlotManagementView: View {
                     }
                 }
             }
-            .navigationTitle("Rozkład zamówień")
+            .navigationTitle(String(localized: "Rozkład zamówień"))
             .navigationBarTitleDisplayMode(.inline)
         }
         .task {
             print("📱 SlotManagementView .task -> load()")
             await viewModel.load()
         }
-        .alert("Błąd", isPresented: Binding(
+        .alert(String(localized: "Błąd"), isPresented: Binding(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.errorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) {
+            Button(String(localized: "OK"), role: .cancel) {
                 viewModel.errorMessage = nil
             }
         } message: {
@@ -105,7 +105,7 @@ struct SlotManagementView: View {
     private var dateSection: some View {
         LMCard {
             VStack(alignment: .leading, spacing: 14) {
-                sectionTitle("Dzień")
+                sectionTitle(String(localized: "Dzień"))
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
@@ -140,7 +140,7 @@ struct SlotManagementView: View {
                     }
                 }
 
-                Text(DateFormatter.polishFullDateTitle.string(from: viewModel.selectedDate).capitalized)
+                Text(fullDateTitle(viewModel.selectedDate))
                     .font(.slotWix(14, weight: .medium))
                     .foregroundStyle(secondaryText)
             }
@@ -151,7 +151,7 @@ struct SlotManagementView: View {
         LMCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    sectionTitle("Sloty")
+                    sectionTitle(String(localized: "Sloty"))
 
                     Spacer()
 
@@ -164,11 +164,11 @@ struct SlotManagementView: View {
 
                 if viewModel.adminSlots.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Brak slotów")
+                        Text(String(localized: "Brak slotów"))
                             .font(.slotWix(16, weight: .semiBold))
                             .foregroundStyle(.black)
 
-                        Text("Sprawdź godziny tego dnia lub ustawienia slotów")
+                        Text(String(localized: "Sprawdź godziny tego dnia lub ustawienia slotów"))
                             .font(.slotWix(13, weight: .regular))
                             .foregroundStyle(mutedText)
                     }
@@ -190,10 +190,10 @@ struct SlotManagementView: View {
     private func settingsSection(settings: VenueSlotSettings) -> some View {
         LMCard {
             VStack(alignment: .leading, spacing: 16) {
-                sectionTitle("Ustawienia")
+                sectionTitle(String(localized: "Ustawienia"))
 
                 stepperRow(
-                    title: "Długość slotu",
+                    title: String(localized: "Długość slotu"),
                     value: Binding(
                         get: { viewModel.settings?.slotDurationMinutes ?? 15 },
                         set: {
@@ -202,11 +202,11 @@ struct SlotManagementView: View {
                         }
                     ),
                     range: [5, 10, 15, 20, 30, 45, 60],
-                    suffix: "min"
+                    suffix: String(localized: "min")
                 )
 
                 stepperRow(
-                    title: "Limit domyślny",
+                    title: String(localized: "Limit domyślny"),
                     value: Binding(
                         get: { viewModel.settings?.defaultCapacity ?? 3 },
                         set: {
@@ -219,7 +219,7 @@ struct SlotManagementView: View {
                 )
 
                 LMToggleRow(
-                    title: "Najszybszy odbiór",
+                    title: String(localized: "Najszybszy odbiór"),
                     subtitle: "",
                     isOn: Binding(
                         get: { viewModel.settings?.allowAsap ?? true },
@@ -249,7 +249,7 @@ struct SlotManagementView: View {
                                 .scaleEffect(0.9)
                         }
 
-                        Text(viewModel.isSavingSettings ? "Zapisywanie..." : "Zapisz ustawienia")
+                        Text(viewModel.isSavingSettings ? String(localized: "Zapisywanie...") : String(localized: "Zapisz ustawienia"))
                             .font(.slotWix(16, weight: .semiBold))
                             .foregroundStyle(.white)
                     }
@@ -286,7 +286,7 @@ struct SlotManagementView: View {
                             .foregroundStyle(.black)
 
                         if slot.hasCapacityOverride {
-                            Text("Limit")
+                            Text(String(localized: "Limit"))
                                 .font(.slotWix(11, weight: .semiBold))
                                 .foregroundStyle(accentOrange)
                                 .padding(.horizontal, 8)
@@ -296,7 +296,7 @@ struct SlotManagementView: View {
                         }
                     }
 
-                    Text("\(slot.taken) / \(slot.capacity) zamówień")
+                    Text(String(format: String(localized: "%1$lld / %2$lld zamówień"), slot.taken, slot.capacity))
                         .font(.slotWix(13, weight: .medium))
                         .foregroundStyle(.black.opacity(0.56))
                 }
@@ -304,7 +304,7 @@ struct SlotManagementView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 8) {
-                    Text(slot.statusTitle)
+                    Text(localizedStatusTitle(for: slot))
                         .font(.slotWix(12, weight: .semiBold))
                         .foregroundStyle(statusForeground(for: slot.status))
                         .padding(.horizontal, 10)
@@ -312,7 +312,7 @@ struct SlotManagementView: View {
                         .background(statusBackground(for: slot.status))
                         .clipShape(Capsule())
 
-                    Text("Pozostało \(slot.remaining)")
+                    Text(String(format: String(localized: "Pozostało %lld"), slot.remaining))
                         .font(.slotWix(12, weight: .medium))
                         .foregroundStyle(.black.opacity(0.48))
                 }
@@ -387,32 +387,6 @@ struct SlotManagementView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.slotWix(15, weight: .semiBold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(accentOrange)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func secondaryButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.slotWix(15, weight: .semiBold))
-                .foregroundStyle(.black)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(softFill)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
             .font(.slotWix(20, weight: .bold))
@@ -421,16 +395,38 @@ struct SlotManagementView: View {
 
     private func shortWeekday(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "pl_PL")
-        formatter.dateFormat = "EEE"
+        formatter.locale = Locale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE")
         return formatter.string(from: date).capitalized
     }
 
     private func dayNumber(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "pl_PL")
+        formatter.locale = Locale.current
         formatter.dateFormat = "d"
         return formatter.string(from: date)
+    }
+
+    private func fullDateTitle(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEEE d MMMM")
+        return formatter.string(from: date).capitalized
+    }
+
+    private func localizedStatusTitle(for slot: AdminDaySlot) -> String {
+        switch slot.status {
+        case "available":
+            return String(localized: "Dostępne")
+        case "blocked":
+            return String(localized: "Zablokowane")
+        case "full":
+            return String(localized: "Pełny")
+        case "too_late":
+            return String(localized: "Za późno")
+        default:
+            return slot.statusTitle
+        }
     }
 
     private func statusForeground(for status: String) -> Color {
@@ -480,19 +476,19 @@ private struct SlotEditorSheet: View {
                     .font(.slotWix(24, weight: .bold))
                     .foregroundStyle(.black)
 
-                Text("\(slot.taken) / \(slot.capacity) zamówień")
+                Text(String(format: String(localized: "%1$lld / %2$lld zamówień"), slot.taken, slot.capacity))
                     .font(.slotWix(14, weight: .medium))
                     .foregroundStyle(.black.opacity(0.56))
             }
 
             LMInputField(
-                title: "Limit slotu",
+                title: String(localized: "Limit slotu"),
                 text: $capacityText,
                 keyboard: .numberPad
             )
 
             Button(action: onToggleBlocked) {
-                Text(slot.isBlocked ? "Odblokuj slot" : "Zablokuj slot")
+                Text(slot.isBlocked ? String(localized: "Odblokuj slot") : String(localized: "Zablokuj slot"))
                     .font(.slotWix(15, weight: .semiBold))
                     .foregroundStyle(slot.isBlocked ? .white : .black)
                     .frame(maxWidth: .infinity)
@@ -504,7 +500,7 @@ private struct SlotEditorSheet: View {
 
             HStack(spacing: 12) {
                 Button(action: onClear) {
-                    Text("Usuń limit")
+                    Text(String(localized: "Usuń limit"))
                         .font(.slotWix(15, weight: .semiBold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -515,7 +511,7 @@ private struct SlotEditorSheet: View {
                 .buttonStyle(.plain)
 
                 Button(action: onSave) {
-                    Text("Zapisz")
+                    Text(String(localized: "Zapisz"))
                         .font(.slotWix(15, weight: .semiBold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -537,15 +533,6 @@ private extension Font {
     static func slotWix(_ size: CGFloat, weight: SlotWixWeight = .regular) -> Font {
         Font.custom(weight.fontName, size: size)
     }
-}
-
-private extension DateFormatter {
-    static let polishFullDateTitle: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "pl_PL")
-        formatter.dateFormat = "EEEE, d MMMM"
-        return formatter
-    }()
 }
 
 private enum SlotWixWeight {

@@ -53,6 +53,8 @@ final class EditProfileViewModel {
             loadedDraft.phone = profile.phone ?? ""
             loadedDraft.username = profile.username ?? ""
             loadedDraft.accentColorHex = profile.accent_color ?? "#5BE47B"
+            loadedDraft.publicLanguage = profile.public_language ?? "pl"
+            loadedDraft.publicCurrency = profile.public_currency ?? "PLN"
             loadedDraft.isAcceptingOrders = profile.is_accepting_orders ?? true
             loadedDraft.smsConfirmationEnabled = profile.sms_confirmation_enabled ?? true
             loadedDraft.pickupAvailable = profile.pickup_enabled ?? true
@@ -295,6 +297,8 @@ private extension EditProfileViewModel {
                 pickup_enabled,
                 delivery_enabled,
                 accent_color,
+                public_language,
+                public_currency,
                 is_accepting_orders,
                 slot_interval_minutes,
                 delivery_price_per_km,
@@ -371,6 +375,8 @@ private extension EditProfileViewModel {
             pickup_enabled: draft.pickupAvailable,
             delivery_enabled: draft.deliveryAvailable,
             accent_color: draft.accentColorHex.uppercased(),
+            public_language: draft.publicLanguage.lowercased(),
+            public_currency: draft.publicCurrency.uppercased(),
             is_accepting_orders: draft.isAcceptingOrders,
             slot_interval_minutes: draft.slotIntervalMinutes,
             delivery_price_per_km: draft.deliveryAvailable ? Self.decimalFromString(draft.deliveryPricePerKm) : nil,
@@ -528,6 +534,8 @@ private struct ProfileRow: Decodable {
     let pickup_enabled: Bool?
     let delivery_enabled: Bool?
     let accent_color: String?
+    let public_language: String?
+    let public_currency: String?
     let is_accepting_orders: Bool?
     let slot_interval_minutes: Int?
     let delivery_price_per_km: Double?
@@ -581,6 +589,8 @@ private struct ProfileUpdatePayload: Encodable {
     let pickup_enabled: Bool
     let delivery_enabled: Bool
     let accent_color: String
+    let public_language: String
+    let public_currency: String
     let is_accepting_orders: Bool
     let slot_interval_minutes: Int
     let delivery_price_per_km: Double?

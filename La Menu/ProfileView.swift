@@ -2,6 +2,8 @@ import SwiftUI
 import CoreImage.CIFilterBuiltins
 import UIKit
 import Photos
+import Supabase
+import PostgREST
 
 struct ProfileView: View {
     @Environment(AuthViewModel.self) private var auth
@@ -9,12 +11,16 @@ struct ProfileView: View {
     @State private var showEditProfile = false
     @State private var showSlotManagement = false
     @State private var showAllergensManagement = false
+    @State private var showPlansView = false
     @State private var showDeleteAccountAlert = false
     @State private var isDeletingAccount = false
 
     @State private var qrSaveAlertTitle = ""
     @State private var qrSaveAlertMessage = ""
     @State private var showQRSaveAlert = false
+
+    @State private var smsOverview: SubscriptionPlanOverview?
+    @State private var isLoadingSmsOverview = false
 
     private let pageBackground = Color.white
     private let softFill = Color.black.opacity(0.04)
@@ -29,9 +35,22 @@ struct ProfileView: View {
         auth.profile?.id
     }
 
+    private var currentPlan: SubscriptionPlan {
+        auth.profile?.subscriptionPlan ?? .free
+    }
+
+    private var currentPlanTitle: String {
+        currentPlan.title
+    }
+
+    private var hasBusinessName: Bool {
+        let value = auth.profile?.businessName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !value.isEmpty
+    }
+
     private var businessName: String {
         let value = auth.profile?.businessName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return value.isEmpty ? "Właściciel konta" : value
+        return value.isEmpty ? String(localized: "Właściciel konta") : value
     }
 
     private var usernameText: String {
@@ -39,7 +58,7 @@ struct ProfileView: View {
             return "lamenu.pl/\(username)"
         }
 
-        return "Link nie został jeszcze ustawiony"
+        return String(localized: "Link nie został jeszcze ustawiony")
     }
 
     private var publicMenuURLText: String? {
@@ -65,7 +84,7 @@ struct ProfileView: View {
             return address
         }
 
-        return "Adres nie został jeszcze uzupełniony"
+        return String(localized: "Adres nie został jeszcze uzupełniony")
     }
 
     private var phoneText: String {
@@ -73,11 +92,11 @@ struct ProfileView: View {
             return phone
         }
 
-        return "Telefon nie został jeszcze uzupełniony"
+        return String(localized: "Telefon nie został jeszcze uzupełniony")
     }
 
     private var accountSubtitle: String {
-        "Zarządzaj kontem, profilem lokalu i ustawieniami zamówień w jednym miejscu"
+        String(localized: "Zarządzaj kontem, profilem lokalu i ustawieniami zamówień w jednym miejscu")
     }
 
     private var logoURL: URL? {
@@ -95,27 +114,39 @@ struct ProfileView: View {
     }
 
     private var smsRemainingValue: Int {
-        auth.profile?.smsCredits ?? 0
+        smsOverview?.smsRemaining ?? 0
     }
 
     private var smsUsedValue: Int {
-        if let value = auth.profile?.smsUsedThisMonth {
-            return value
-        }
+        smsOverview?.smsUsedThisPeriod ?? 0
+    }
 
-        if let value = auth.profile?.smsUsedCurrentMonth {
-            return value
-        }
-
-        return 0
+    private var smsLimitValue: Int {
+        smsOverview?.smsLimit ?? 0
     }
 
     private var smsRemainingText: String {
-        "\(smsRemainingValue)"
+        if isLoadingSmsOverview && smsOverview == nil {
+            return "..."
+        }
+
+        return "\(smsRemainingValue)"
     }
 
     private var smsUsedText: String {
-        "\(smsUsedValue)"
+        if isLoadingSmsOverview && smsOverview == nil {
+            return "..."
+        }
+
+        return "\(smsUsedValue)"
+    }
+
+    private var smsLimitText: String {
+        if isLoadingSmsOverview && smsOverview == nil {
+            return String(localized: "Ładowanie")
+        }
+
+        return String(localized: "z \(smsLimitValue) SMS")
     }
 
     var body: some View {
@@ -127,6 +158,7 @@ struct ProfileView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 24) {
                         headerSection
+                        subscriptionCard
                         smsCard
                         profileCard
                         qrCodeCard
@@ -137,6 +169,9 @@ struct ProfileView: View {
                     .padding(.top, 14)
                     .padding(.bottom, 120)
                 }
+                .refreshable {
+                    await loadSmsOverview()
+                }
                 .alert(qrSaveAlertTitle, isPresented: $showQRSaveAlert) {
                     Button("OK", role: .cancel) { }
                 } message: {
@@ -144,6 +179,14 @@ struct ProfileView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .task(id: profileId) {
+                await loadSmsOverview()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .subscriptionPlanDidChange)) { _ in
+                Task {
+                    await loadSmsOverview()
+                }
+            }
             .sheet(isPresented: $showEditProfile) {
                 EditVenueProfileView()
                     .environment(auth)
@@ -156,6 +199,19 @@ struct ProfileView: View {
             .navigationDestination(isPresented: $showAllergensManagement) {
                 if let profileId {
                     AllergensManagementView(profileId: profileId)
+                }
+            }
+            .navigationDestination(isPresented: $showPlansView) {
+                if let profileId {
+                    PlansView(
+                        profileId: profileId,
+                        currentPlan: currentPlan,
+                        currentSmsCredits: smsRemainingValue
+                    ) { _ in
+                        Task {
+                            await loadSmsOverview()
+                        }
+                    }
                 }
             }
             .alert("Usunąć profil?", isPresented: $showDeleteAccountAlert) {
@@ -199,8 +255,87 @@ struct ProfileView: View {
                     foreground: accentGreenText,
                     background: accentGreen.opacity(0.18)
                 )
+
+                infoPill(
+                    title: "Plan \(currentPlanTitle)",
+                    foreground: accentOrange,
+                    background: accentOrange.opacity(0.12)
+                )
             }
         }
+    }
+
+    private var subscriptionCard: some View {
+        Button {
+            if profileId != nil {
+                showPlansView = true
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .center, spacing: 14) {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(accentOrange.opacity(0.12))
+                        .frame(width: 56, height: 56)
+                        .overlay(
+                            Image(systemName: currentPlan.iconName)
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(accentOrange)
+                        )
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Plany i subskrypcja")
+                            .font(.custom("WixMadeforDisplay-Bold", size: 24))
+                            .foregroundStyle(.black)
+
+                        Text("Zobacz dostępne plany i limity dla swojego lokalu")
+                            .font(.custom("WixMadeforDisplay-Regular", size: 14))
+                            .foregroundStyle(mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.black.opacity(0.35))
+                }
+
+                HStack(spacing: 12) {
+                    Text("Aktywny plan")
+                        .font(.custom("WixMadeforDisplay-Medium", size: 13))
+                        .foregroundStyle(secondaryText)
+
+                    Spacer()
+
+                    HStack(spacing: 8) {
+                        Image(systemName: currentPlan.iconName)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(accentOrange)
+
+                        Text(currentPlanTitle)
+                            .font(.custom("WixMadeforDisplay-Bold", size: 18))
+                            .foregroundStyle(.black)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.035))
+                    .clipShape(Capsule())
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color.black.opacity(0.025))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                Text("Dotknij, aby przejść do ekranu subskrypcji")
+                    .font(.custom("WixMadeforDisplay-Medium", size: 13))
+                    .foregroundStyle(accentOrange)
+            }
+            .padding(20)
+            .profileCardStyle()
+        }
+        .buttonStyle(.plain)
+        .disabled(profileId == nil)
+        .opacity(profileId == nil ? 0.65 : 1)
     }
 
     private var smsCard: some View {
@@ -220,25 +355,32 @@ struct ProfileView: View {
                         .font(.custom("WixMadeforDisplay-Bold", size: 22))
                         .foregroundStyle(.black)
 
-                    Text("Dostępna liczba wiadomości SMS dla Twojego lokalu pobierana bezpośrednio z profilu")
+                    Text("Dostępna liczba wiadomości SMS w bieżącym okresie rozliczeniowym")
                         .font(.custom("WixMadeforDisplay-Regular", size: 14))
                         .foregroundStyle(mutedText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
+
+                if isLoadingSmsOverview {
+                    ProgressView()
+                        .tint(accentOrange)
+                }
             }
 
             HStack(spacing: 12) {
                 smsMetricCard(
                     title: "Dostępne",
                     value: smsRemainingText,
+                    footer: smsLimitText,
                     highlight: true
                 )
 
                 smsMetricCard(
                     title: "Wykorzystane",
-                    value: smsUsedText
+                    value: smsUsedText,
+                    footer: String(localized: "w tym okresie")
                 )
             }
         }
@@ -247,8 +389,9 @@ struct ProfileView: View {
     }
 
     private func smsMetricCard(
-        title: String,
+        title: LocalizedStringKey,
         value: String,
+        footer: String = "SMS",
         highlight: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -260,7 +403,7 @@ struct ProfileView: View {
                 .font(.custom("WixMadeforDisplay-Bold", size: 28))
                 .foregroundStyle(.black)
 
-            Text("SMS")
+            Text(footer)
                 .font(.custom("WixMadeforDisplay-Medium", size: 12))
                 .foregroundStyle(mutedText)
         }
@@ -270,7 +413,7 @@ struct ProfileView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private func infoPill(title: String, foreground: Color, background: Color) -> some View {
+    private func infoPill(title: LocalizedStringKey, foreground: Color, background: Color) -> some View {
         Text(title)
             .font(.custom("WixMadeforDisplay-Medium", size: 13))
             .foregroundStyle(foreground)
@@ -491,7 +634,7 @@ struct ProfileView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(Color.black.opacity(0.05))
 
-            if businessInitial.isEmpty || businessName == "Właściciel konta" {
+            if businessInitial.isEmpty || !hasBusinessName {
                 Image(systemName: "storefront.fill")
                     .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(.black)
@@ -507,7 +650,7 @@ struct ProfileView: View {
         )
     }
 
-    private func profileInfoRow(icon: String, title: String, value: String) -> some View {
+    private func profileInfoRow(icon: String, title: LocalizedStringKey, value: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(softFill)
@@ -543,6 +686,18 @@ struct ProfileView: View {
                 .foregroundStyle(.black)
 
             VStack(spacing: 12) {
+                toolRow(
+                    icon: "creditcard",
+                    title: "Plany i subskrypcja",
+                    subtitle: "Zmień plan, sprawdź limity menu i pakiety SMS",
+                    isEnabled: profileId != nil,
+                    action: {
+                        if profileId != nil {
+                            showPlansView = true
+                        }
+                    }
+                )
+
                 toolRow(
                     icon: "person.crop.circle",
                     title: "Edycja profilu",
@@ -583,8 +738,8 @@ struct ProfileView: View {
 
     private func toolRow(
         icon: String,
-        title: String,
-        subtitle: String,
+        title: LocalizedStringKey,
+        subtitle: LocalizedStringKey,
         isEnabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
@@ -678,7 +833,7 @@ struct ProfileView: View {
                             .font(.system(size: 16, weight: .semibold))
                     }
 
-                    Text(isDeletingAccount ? "Usuwanie..." : "Usuń profil")
+                    Text(isDeletingAccount ? String(localized: "Usuwanie...") : String(localized: "Usuń profil"))
                         .font(.custom("WixMadeforDisplay-SemiBold", size: 18))
                 }
                 .foregroundStyle(destructiveRed)
@@ -700,7 +855,7 @@ struct ProfileView: View {
 
     private func actionButton(
         icon: String,
-        title: String,
+        title: LocalizedStringKey,
         foreground: Color,
         background: Color
     ) -> some View {
@@ -719,11 +874,36 @@ struct ProfileView: View {
     }
 
     @MainActor
+    private func loadSmsOverview() async {
+        guard let profileId else {
+            smsOverview = nil
+            return
+        }
+
+        isLoadingSmsOverview = true
+        defer { isLoadingSmsOverview = false }
+
+        do {
+            let result: [SubscriptionPlanOverview] = try await SupabaseManager.shared
+                .from("subscription_plan_overview")
+                .select("profile_id,sms_used_this_period,sms_limit,sms_remaining")
+                .eq("profile_id", value: profileId.uuidString)
+                .limit(1)
+                .execute()
+                .value
+
+            smsOverview = result.first
+        } catch {
+            print("Failed to load SMS overview:", error.localizedDescription)
+        }
+    }
+
+    @MainActor
     private func downloadQRCodeImage() {
         guard let publicMenuURLText else {
             showQRSaveResult(
-                title: "Brak linku",
-                message: "Najpierw ustaw link publiczny, aby wygenerować kod QR"
+                title: String(localized: "Brak linku"),
+                message: String(localized: "Najpierw ustaw link publiczny, aby wygenerować kod QR")
             )
             return
         }
@@ -739,8 +919,8 @@ struct ProfileView: View {
 
         guard let image = renderer.uiImage else {
             showQRSaveResult(
-                title: "Błąd",
-                message: "Nie udało się wygenerować kodu QR"
+                title: String(localized: "Błąd"),
+                message: String(localized: "Nie udało się wygenerować kodu QR")
             )
             return
         }
@@ -762,8 +942,8 @@ struct ProfileView: View {
                         performSaveImageToPhotos(image)
                     } else {
                         showQRSaveResult(
-                            title: "Brak dostępu",
-                            message: "Aby zapisać kod QR w galerii, zezwól aplikacji na dodawanie zdjęć"
+                            title: String(localized: "Brak dostępu"),
+                            message: String(localized: "Aby zapisać kod QR w galerii, zezwól aplikacji na dodawanie zdjęć")
                         )
                     }
                 }
@@ -771,14 +951,14 @@ struct ProfileView: View {
 
         case .denied, .restricted:
             showQRSaveResult(
-                title: "Brak dostępu",
-                message: "Aplikacja nie ma dostępu do zapisywania zdjęć. Zmień to w ustawieniach iPhone’a"
+                title: String(localized: "Brak dostępu"),
+                message: String(localized: "Aplikacja nie ma dostępu do zapisywania zdjęć. Zmień to w ustawieniach iPhone’a")
             )
 
         @unknown default:
             showQRSaveResult(
-                title: "Błąd",
-                message: "Nie udało się uzyskać dostępu do galerii"
+                title: String(localized: "Błąd"),
+                message: String(localized: "Nie udało się uzyskać dostępu do galerii")
             )
         }
     }
@@ -790,13 +970,13 @@ struct ProfileView: View {
             DispatchQueue.main.async {
                 if success {
                     showQRSaveResult(
-                        title: "Zapisano",
-                        message: "Kod QR został zapisany w galerii zdjęć"
+                        title: String(localized: "Zapisano"),
+                        message: String(localized: "Kod QR został zapisany w galerii zdjęć")
                     )
                 } else {
                     showQRSaveResult(
-                        title: "Błąd",
-                        message: error?.localizedDescription ?? "Nie udało się zapisać kodu QR w galerii"
+                        title: String(localized: "Błąd"),
+                        message: error?.localizedDescription ?? String(localized: "Nie udało się zapisać kodu QR w galerii")
                     )
                 }
             }
@@ -808,6 +988,20 @@ struct ProfileView: View {
         qrSaveAlertTitle = title
         qrSaveAlertMessage = message
         showQRSaveAlert = true
+    }
+}
+
+struct SubscriptionPlanOverview: Decodable {
+    let profileId: UUID
+    let smsUsedThisPeriod: Int
+    let smsLimit: Int
+    let smsRemaining: Int
+
+    enum CodingKeys: String, CodingKey {
+        case profileId = "profile_id"
+        case smsUsedThisPeriod = "sms_used_this_period"
+        case smsLimit = "sms_limit"
+        case smsRemaining = "sms_remaining"
     }
 }
 

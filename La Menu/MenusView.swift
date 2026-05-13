@@ -105,9 +105,14 @@ struct MenusView: View {
                 if let profile = auth.profile {
                     NavigationStack {
                         PlansView(
+                            profileId: profile.id,
                             currentPlan: profile.subscriptionPlan,
-                            currentSmsCredits: profile.currentSmsCredits ?? 0
-                        )
+                            currentSmsCredits: profile.currentSmsCredits ?? profile.smsCredits ?? 0
+                        ) { _ in
+                            Task {
+                                await auth.loadProfileStatus()
+                            }
+                        }
                     }
                 } else {
                     ContentUnavailableView(

@@ -12,7 +12,7 @@ private struct ExistingNIPRecord: Decodable {
     let profile_id: UUID
     let business_display_name: String?
     let legal_business_name: String?
-    let nip: String
+    let nip: String?
 }
 
 private struct CreateProfilePayload: Encodable {
@@ -32,6 +32,9 @@ private struct CreateProfilePayload: Encodable {
     let slot_interval_minutes: Int
     let delivery_price_per_km: Double?
     let sms_confirmation_enabled: Bool
+    let public_country: String
+    let public_language: String
+    let public_currency: String
 }
 
 private struct UpdateProfilePayload: Encodable {
@@ -50,6 +53,9 @@ private struct UpdateProfilePayload: Encodable {
     let slot_interval_minutes: Int
     let delivery_price_per_km: Double?
     let sms_confirmation_enabled: Bool
+    let public_country: String
+    let public_language: String
+    let public_currency: String
 }
 
 private struct CreateBusinessHourPayload: Encodable {
@@ -103,7 +109,7 @@ private struct VenueLegalDetailsPayload: Encodable {
     let profile_id: String
     let legal_business_name: String
     let business_display_name: String
-    let nip: String
+    let nip: String?
     let address_line_1: String
     let address_line_2: String?
     let postal_code: String
@@ -216,22 +222,22 @@ final class AuthViewModel {
         let normalizedProfileId = profileId.lowercased()
 
         print("""
-    🟢 [OneSignal] login START
-       source: \(source)
-       external_id/profile_id: \(normalizedProfileId)
-    """)
+🟢 [OneSignal] login START
+   source: \(source)
+   external_id/profile_id: \(normalizedProfileId)
+""")
 
         OneSignal.login(normalizedProfileId)
 
         print("""
-    🟢 [OneSignal] login FINISHED
-       source: \(source)
-       external_id/profile_id: \(normalizedProfileId)
-       onesignalId: \(OneSignal.User.onesignalId ?? "nil")
-       push token: \(OneSignal.User.pushSubscription.token ?? "nil")
-       push id: \(OneSignal.User.pushSubscription.id ?? "nil")
-       opted in: \(OneSignal.User.pushSubscription.optedIn)
-    """)
+🟢 [OneSignal] login FINISHED
+   source: \(source)
+   external_id/profile_id: \(normalizedProfileId)
+   onesignalId: \(OneSignal.User.onesignalId ?? "nil")
+   push token: \(OneSignal.User.pushSubscription.token ?? "nil")
+   push id: \(OneSignal.User.pushSubscription.id ?? "nil")
+   opted in: \(OneSignal.User.pushSubscription.optedIn)
+""")
     }
 
     private func logoutOneSignal(source: String) {
@@ -288,6 +294,7 @@ final class AuthViewModel {
 
     func signIn(email: String, password: String) async {
         log("signIn started email -> \(email.trimmed)")
+
         guard !email.trimmed.isEmpty, !password.isEmpty else {
             errorMessage = "Wpisz e-mail i hasło."
             log("signIn validation failed")
@@ -324,6 +331,7 @@ final class AuthViewModel {
 
     func signUp(email: String, password: String) async {
         log("signUp started email -> \(email.trimmed)")
+
         guard !email.trimmed.isEmpty, !password.isEmpty else {
             errorMessage = "Wpisz e-mail i hasło."
             log("signUp validation failed")
@@ -367,6 +375,7 @@ final class AuthViewModel {
         email: String?
     ) async {
         log("signInWithApple started")
+
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
@@ -392,10 +401,8 @@ final class AuthViewModel {
 
             let fullName = [givenName, familyName]
                 .compactMap { value in
-                    guard let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        return nil
-                    }
-                    return value
+                    guard let value, !value.trimmed.isEmpty else { return nil }
+                    return value.trimmed
                 }
                 .joined(separator: " ")
 
@@ -615,17 +622,16 @@ needsOnboarding -> \(needsOnboarding)
     func refreshNIPWarning() async {
         noticeMessage = nil
 
-        let nip = onboardingDraft.nip.trimmed
-        guard !nip.isEmpty else {
-            log("refreshNIPWarning skipped because nip empty")
+        guard let normalizedNip = normalizedNIP(onboardingDraft.nip) else {
+            log("refreshNIPWarning skipped because NIP is empty")
             return
         }
 
-        log("refreshNIPWarning started nip -> \(nip)")
+        log("refreshNIPWarning started normalizedNip -> \(normalizedNip)")
 
         do {
             let existingOwnedProfileId = try await fetchExistingOwnedProfileId()
-            let existing = try await findExistingNIPUsage(nip: nip, excludingProfileId: existingOwnedProfileId)
+            let existing = try await findExistingNIPUsage(nip: normalizedNip, excludingProfileId: existingOwnedProfileId)
 
             guard let found = existing.first else {
                 log("refreshNIPWarning no existing NIP usage")
@@ -644,6 +650,17 @@ needsOnboarding -> \(needsOnboarding)
         }
     }
 
+    private func normalizedPublicCountry(_ value: String) -> String {
+        let country = value.trimmed.lowercased()
+
+        switch country {
+        case "uk":
+            return "uk"
+        default:
+            return "pl"
+        }
+    }
+
     func completeOnboarding() async {
         await completeOnboarding(draft: onboardingDraft)
     }
@@ -659,15 +676,21 @@ needsOnboarding -> \(needsOnboarding)
             return
         }
 
+        let normalizedNip = normalizedNIP(draft.nip)
+
         log("""
 completeOnboarding started
 currentUserId -> \(currentUserId.uuidString)
 draft.businessName -> \(draft.businessName)
 draft.username -> \(draft.username)
 draft.accentColorHex -> \(draft.accentColorHex)
+draft.publicCountry -> \(draft.publicCountry)
+draft.publicLanguage -> \(draft.publicLanguage)
+draft.publicCurrency -> \(draft.publicCurrency)
 draft.legalBusinessName -> \(draft.legalBusinessName)
 draft.businessDisplayName -> \(draft.businessDisplayName)
-draft.nip -> \(draft.nip)
+draft.nip raw -> \(draft.nip)
+draft.nip normalized -> \(normalizedNip ?? "nil")
 draft.addressLine1 -> \(draft.addressLine1)
 draft.postalCode -> \(draft.postalCode)
 draft.city -> \(draft.city)
@@ -706,6 +729,8 @@ hasFirstItemImageData -> \(draft.firstItemImageData != nil)
 
             let username = draft.username.slugified
             let businessName = draft.businessName.trimmed
+            let publicCountry = normalizedPublicCountry(draft.publicCountry)
+
             let deliveryPricePerKmValue = Double(
                 draft.deliveryPricePerKm.replacingOccurrences(of: ",", with: ".")
             )
@@ -720,21 +745,25 @@ hasFirstItemImageData -> \(draft.firstItemImageData != nil)
                 throw Self.makeFriendlyError("Ten link jest już zajęty. Wybierz inny.")
             }
 
-            let existingNIPRows = try await findExistingNIPUsage(
-                nip: draft.nip.trimmed,
-                excludingProfileId: existingOwnedProfileId
-            )
+            if let normalizedNip {
+                let existingNIPRows = try await findExistingNIPUsage(
+                    nip: normalizedNip,
+                    excludingProfileId: existingOwnedProfileId
+                )
 
-            log("completeOnboarding existing NIP rows count -> \(existingNIPRows.count)")
+                log("completeOnboarding existing NIP rows count -> \(existingNIPRows.count)")
 
-            if let found = existingNIPRows.first {
-                let displayName =
-                    found.business_display_name?.trimmed.nilIfEmpty ??
-                    found.legal_business_name?.trimmed.nilIfEmpty ??
-                    "innym lokalu"
+                if let found = existingNIPRows.first {
+                    let displayName =
+                        found.business_display_name?.trimmed.nilIfEmpty ??
+                        found.legal_business_name?.trimmed.nilIfEmpty ??
+                        "innym lokalu"
 
-                noticeMessage = "Ten NIP jest już używany w lokalu „\(displayName)”. Możesz mimo to kontynuować."
-                log("completeOnboarding found duplicated NIP in -> \(displayName)")
+                    noticeMessage = "Ten NIP jest już używany w lokalu „\(displayName)”. Możesz mimo to kontynuować."
+                    log("completeOnboarding found duplicated NIP in -> \(displayName)")
+                }
+            } else {
+                log("completeOnboarding skipped NIP duplicate check because NIP is nil")
             }
 
             let storageOwnerId = currentUserId.uuidString.lowercased()
@@ -785,7 +814,10 @@ hasFirstItemImageData -> \(draft.firstItemImageData != nil)
                     is_accepting_orders: draft.isAcceptingOrders,
                     slot_interval_minutes: draft.slotIntervalMinutes,
                     delivery_price_per_km: draft.deliveryAvailable ? deliveryPricePerKmValue : nil,
-                    sms_confirmation_enabled: draft.smsConfirmationEnabled
+                    sms_confirmation_enabled: draft.smsConfirmationEnabled,
+                    public_country: publicCountry,
+                    public_language: draft.publicLanguage,
+                    public_currency: draft.publicCurrency
                 )
 
                 savedProfile = try await SupabaseManager.shared
@@ -830,7 +862,10 @@ savedProfile.onboardingCompleted -> \(savedProfile.onboardingCompleted)
                     is_accepting_orders: draft.isAcceptingOrders,
                     slot_interval_minutes: draft.slotIntervalMinutes,
                     delivery_price_per_km: draft.deliveryAvailable ? deliveryPricePerKmValue : nil,
-                    sms_confirmation_enabled: draft.smsConfirmationEnabled
+                    sms_confirmation_enabled: draft.smsConfirmationEnabled,
+                    public_country: publicCountry,
+                    public_language: draft.publicLanguage,
+                    public_currency: draft.publicCurrency
                 )
 
                 savedProfile = try await SupabaseManager.shared
@@ -892,7 +927,7 @@ savedProfile.ownerUserId -> \(savedProfile.ownerUserId?.uuidString ?? "nil")
                     title: defaultMenuTitle,
                     slug: defaultMenuSlug,
                     description: "Main public menu",
-                    currency: "PLN",
+                    currency: draft.publicCurrency,
                     is_active: true,
                     is_public: true,
                     sort_order: 0
@@ -924,7 +959,7 @@ savedProfile.ownerUserId -> \(savedProfile.ownerUserId?.uuidString ?? "nil")
                     title: defaultMenuTitle,
                     slug: defaultMenuSlug,
                     description: "Main public menu",
-                    currency: "PLN",
+                    currency: draft.publicCurrency,
                     is_active: true,
                     is_public: true,
                     sort_order: 0
@@ -989,6 +1024,7 @@ savedProfile.ownerUserId -> \(savedProfile.ownerUserId?.uuidString ?? "nil")
                 : draft.businessDisplayName.trimmed
 
             let contactEmail = draft.contactEmail.trimmed.lowercased()
+
             let contactPhone = draft.contactPhone.trimmed.isEmpty
                 ? draft.phone.trimmed
                 : draft.contactPhone.trimmed
@@ -1001,11 +1037,22 @@ savedProfile.ownerUserId -> \(savedProfile.ownerUserId?.uuidString ?? "nil")
                 ? contactPhone
                 : draft.complaintPhone.trimmed
 
+            log("""
+completeOnboarding building legalPayload
+legalBusinessName -> \(legalBusinessName)
+businessDisplayName -> \(businessDisplayName)
+nip to save -> \(normalizedNip ?? "nil")
+contactEmail -> \(contactEmail)
+contactPhone -> \(contactPhone)
+complaintEmail -> \(complaintEmail)
+complaintPhone -> \(complaintPhone)
+""")
+
             let legalPayload = VenueLegalDetailsPayload(
                 profile_id: profileId,
                 legal_business_name: legalBusinessName,
                 business_display_name: businessDisplayName,
-                nip: draft.nip.trimmed,
+                nip: normalizedNip,
                 address_line_1: draft.addressLine1.trimmed,
                 address_line_2: draft.addressLine2.nilIfEmpty,
                 postal_code: draft.postalCode.trimmed,
@@ -1072,8 +1119,8 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
                 logError("completeOnboarding verification fetch failed", error: error)
             }
 
-            resetOnboardingState()
-            log("completeOnboarding resetOnboardingState called after success")
+            resetOnboardingDraftOnly()
+            log("completeOnboarding resetOnboardingDraftOnly called after success")
         } catch {
             logError("completeOnboarding failed", error: error)
             errorMessage = friendlyErrorMessage(from: error)
@@ -1084,6 +1131,7 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
 
     func deleteAccount() async {
         guard !isLoading else { return }
+
         guard let currentUserId else {
             errorMessage = "Nie znaleziono zalogowanego użytkownika."
             log("deleteAccount aborted because currentUserId is nil")
@@ -1139,6 +1187,7 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
 
     func signOut() async {
         log("signOut started")
+
         isLoading = true
         errorMessage = nil
         noticeMessage = nil
@@ -1167,6 +1216,16 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
 
     func resetOnboardingState() {
         log("resetOnboardingState called")
+        onboardingDraft = OnboardingDraft()
+        onboardingStep = .basicInfo
+        usernameValidationState = .idle
+        lastCheckedUsername = ""
+        errorMessage = nil
+        noticeMessage = nil
+    }
+
+    private func resetOnboardingDraftOnly() {
+        log("resetOnboardingDraftOnly called")
         onboardingDraft = OnboardingDraft()
         onboardingStep = .basicInfo
         usernameValidationState = .idle
@@ -1258,6 +1317,9 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
         onboardingDraft.phone = profile.phone ?? ""
         onboardingDraft.username = profile.username.slugified
         onboardingDraft.accentColorHex = profile.accentColor ?? "#FFAA00"
+        onboardingDraft.publicCountry = profile.publicCountry ?? "pl"
+        onboardingDraft.publicLanguage = profile.publicLanguage ?? "pl"
+        onboardingDraft.publicCurrency = profile.publicCurrency ?? "PLN"
         onboardingDraft.isAcceptingOrders = profile.isAcceptingOrders
         onboardingDraft.slotIntervalMinutes = profile.slotIntervalMinutes ?? 15
         onboardingDraft.smsConfirmationEnabled = profile.smsConfirmationEnabled
@@ -1275,6 +1337,15 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
 
     private func validateDraftForCompletion(_ draft: OnboardingDraft) throws {
         let username = draft.username.slugified
+        let normalizedNip = normalizedNIP(draft.nip)
+
+        log("""
+validateDraftForCompletion started
+businessName -> \(draft.businessName)
+username -> \(username)
+nip raw -> \(draft.nip)
+nip normalized -> \(normalizedNip ?? "nil")
+""")
 
         guard draft.businessName.trimmed.count >= 2 else {
             throw Self.makeFriendlyError("Wpisz nazwę lokalu.")
@@ -1299,6 +1370,8 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
         guard draft.accentColorHex.trimmed.hasPrefix("#"), draft.accentColorHex.trimmed.count == 7 else {
             throw Self.makeFriendlyError("Wybierz poprawny kolor firmowy.")
         }
+        
+        
 
         guard draft.legalBusinessName.trimmed.count >= 2 else {
             throw Self.makeFriendlyError("Wpisz pełną nazwę firmy.")
@@ -1308,8 +1381,10 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
             throw Self.makeFriendlyError("Wpisz nazwę widoczną dla klientów.")
         }
 
-        guard draft.nip.trimmed.count >= 10 else {
-            throw Self.makeFriendlyError("Wpisz poprawny NIP.")
+        if let normalizedNip {
+            guard normalizedNip.count == 10 else {
+                throw Self.makeFriendlyError("NIP musi mieć 10 cyfr albo zostaw to pole puste.")
+            }
         }
 
         guard draft.addressLine1.trimmed.count >= 3 else {
@@ -1373,6 +1448,13 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
         guard Double(draft.firstItemPrice.replacingOccurrences(of: ",", with: ".")) != nil else {
             throw Self.makeFriendlyError("Wpisz poprawną cenę pierwszej pozycji.")
         }
+
+        log("validateDraftForCompletion passed")
+    }
+
+    private func normalizedNIP(_ value: String) -> String? {
+        let digits = value.filter { $0.isNumber }
+        return digits.isEmpty ? nil : digits
     }
 
     private func buildOrderHoursSummary(from days: [DayHoursDraft]) -> String? {
@@ -1408,17 +1490,17 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
     }
 
     private func findExistingNIPUsage(nip: String, excludingProfileId: UUID?) async throws -> [ExistingNIPRecord] {
-        guard !nip.trimmed.isEmpty else {
-            log("findExistingNIPUsage skipped because nip empty")
+        guard let normalizedNip = normalizedNIP(nip) else {
+            log("findExistingNIPUsage skipped because NIP is empty")
             return []
         }
 
-        log("findExistingNIPUsage started nip -> \(nip.trimmed), excluding -> \(excludingProfileId?.uuidString ?? "nil")")
+        log("findExistingNIPUsage started normalizedNip -> \(normalizedNip), excluding -> \(excludingProfileId?.uuidString ?? "nil")")
 
         let rows: [ExistingNIPRecord] = try await SupabaseManager.shared
             .from("venue_legal_details")
             .select("profile_id,business_display_name,legal_business_name,nip")
-            .eq("nip", value: nip.trimmed)
+            .eq("nip", value: normalizedNip)
             .execute()
             .value
 
@@ -1456,8 +1538,14 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased() {
             log("isUsernameAvailable raw string -> \(stringValue)")
-            if stringValue == "true" { return true }
-            if stringValue == "false" { return false }
+
+            if stringValue == "true" {
+                return true
+            }
+
+            if stringValue == "false" {
+                return false
+            }
         }
 
         log("isUsernameAvailable failed to decode response")
@@ -1475,7 +1563,13 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
         }
 
         log("uploadImageIfNeeded started bucket -> \(bucket), path -> \(path), bytes -> \(data.count)")
-        let url = try await SupabaseManager.uploadImage(data: data, bucket: bucket, path: path)
+
+        let url = try await SupabaseManager.uploadImage(
+            data: data,
+            bucket: bucket,
+            path: path
+        )
+
         log("uploadImageIfNeeded success url -> \(url)")
         return url
     }
@@ -1496,6 +1590,10 @@ verifiedProfile.onboardingCompleted -> \(verifiedProfile.onboardingCompleted)
 
         if message.contains("profiles_username_key") {
             return "Ten link jest już zajęty. Wybierz inny."
+        }
+
+        if message.contains("venue_legal_details_nip_check") {
+            return "NIP musi mieć 10 cyfr albo zostaw to pole puste."
         }
 
         if message.contains("venue_legal_details_contact_email_check") {

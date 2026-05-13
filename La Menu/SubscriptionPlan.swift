@@ -1,10 +1,14 @@
 import Foundation
 
-enum SubscriptionPlan: String, Codable, CaseIterable {
+enum SubscriptionPlan: String, Codable, CaseIterable, Hashable, Identifiable {
     case free
     case plus
     case business
     case premium
+
+    var id: String {
+        rawValue
+    }
 
     var title: String {
         switch self {
@@ -17,6 +21,23 @@ enum SubscriptionPlan: String, Codable, CaseIterable {
         case .premium:
             return "Premium"
         }
+    }
+
+    var productId: String? {
+        switch self {
+        case .free:
+            return nil
+        case .plus:
+            return "lamenu.plus.monthly"
+        case .business:
+            return "lamenu.business.monthly"
+        case .premium:
+            return "lamenu.premium.monthly"
+        }
+    }
+
+    static var paidProductIds: [String] {
+        allCases.compactMap { $0.productId }
     }
 
     var menuItemLimit: Int? {
@@ -54,7 +75,7 @@ enum SubscriptionPlan: String, Codable, CaseIterable {
         }
     }
 
-    var priceText: String {
+    var fallbackPriceText: String {
         switch self {
         case .free:
             return "$0"
@@ -70,6 +91,15 @@ enum SubscriptionPlan: String, Codable, CaseIterable {
     var menuLimitText: String {
         switch self {
         case .free:
+            return "Do 20 pozycji"
+        case .plus, .business, .premium:
+            return "Nielimitowane"
+        }
+    }
+
+    var fullMenuLimitText: String {
+        switch self {
+        case .free:
             return "Do 20 pozycji w menu"
         case .plus, .business, .premium:
             return "Nielimitowane menu"
@@ -83,13 +113,39 @@ enum SubscriptionPlan: String, Codable, CaseIterable {
     var shortDescription: String {
         switch self {
         case .free:
-            return "Dla startu i małych lokali"
+            return "Na start dla małych lokali"
         case .plus:
-            return "Nielimitowane menu i pakiet 200 SMS"
+            return "Więcej SMS i pełna swoboda menu"
         case .business:
-            return "Dla lokali z większą liczbą zamówień"
+            return "Dla rosnących lokali z większą liczbą zamówień"
         case .premium:
             return "Najwyższy pakiet dla najbardziej aktywnych lokali"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .free:
+            return "sparkles"
+        case .plus:
+            return "circle.grid.2x2.fill"
+        case .business:
+            return "briefcase.fill"
+        case .premium:
+            return "crown.fill"
+        }
+    }
+
+    var sortOrder: Int {
+        switch self {
+        case .free:
+            return 0
+        case .plus:
+            return 1
+        case .business:
+            return 2
+        case .premium:
+            return 3
         }
     }
 
@@ -98,6 +154,11 @@ enum SubscriptionPlan: String, Codable, CaseIterable {
               let plan = SubscriptionPlan(rawValue: rawValue.lowercased()) else {
             return .free
         }
+
         return plan
+    }
+
+    static func fromProductId(_ productId: String) -> SubscriptionPlan? {
+        allCases.first { $0.productId == productId }
     }
 }

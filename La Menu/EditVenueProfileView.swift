@@ -51,7 +51,9 @@ struct EditVenueProfileView: View {
                             )
 
                             BrandColorStepView(
-                                accentColorHex: binding(\.accentColorHex)
+                                accentColorHex: binding(\.accentColorHex),
+                                publicLanguage: binding(\.publicLanguage),
+                                publicCurrency: binding(\.publicCurrency)
                             )
 
                             LegalDetailsStepView(
@@ -194,6 +196,157 @@ struct EditVenueProfileView: View {
             set: { viewModel.draft[keyPath: keyPath] = $0 }
         )
     }
+}
+
+private struct PublicSettingsSection: View {
+    @Binding var publicLanguage: String
+    @Binding var publicCurrency: String
+
+    let accentColor: Color
+    let accentSoft: Color
+
+    private let languages: [PublicLanguageOption] = [
+        .init(code: "pl", title: "Polski", subtitle: "Strona menu po polsku", flag: "🇵🇱"),
+        .init(code: "en", title: "English", subtitle: "Menu page in English", flag: "🇬🇧")
+    ]
+
+    private let currencies: [PublicCurrencyOption] = [
+        .init(code: "PLN", title: "Polski złoty", subtitle: "zł", flag: "🇵🇱"),
+        .init(code: "GBP", title: "British pound", subtitle: "£", flag: "🇬🇧"),
+        .init(code: "EUR", title: "Euro", subtitle: "€", flag: "🇪🇺"),
+        .init(code: "USD", title: "US dollar", subtitle: "$", flag: "🇺🇸"),
+        .init(code: "CAD", title: "Canadian dollar", subtitle: "$", flag: "🇨🇦"),
+        .init(code: "UAH", title: "Ukrainian hryvnia", subtitle: "₴", flag: "🇺🇦")
+    ]
+
+    var body: some View {
+        LMHeroCard(
+            title: "Język i waluta",
+            subtitle: "Tutaj możesz ustawić język oraz walutę publicznej strony menu"
+        ) {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Język strony")
+                        .font(.wix(17, wixWeight: .bold))
+                        .foregroundStyle(.black)
+
+                    VStack(spacing: 10) {
+                        ForEach(languages) { option in
+                            PublicOptionButton(
+                                flag: option.flag,
+                                title: option.title,
+                                subtitle: option.subtitle,
+                                isSelected: publicLanguage.lowercased() == option.code.lowercased(),
+                                accentColor: accentColor
+                            ) {
+                                publicLanguage = option.code
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Waluta")
+                        .font(.wix(17, wixWeight: .bold))
+                        .foregroundStyle(.black)
+
+                    VStack(spacing: 10) {
+                        ForEach(currencies) { option in
+                            PublicOptionButton(
+                                flag: option.flag,
+                                title: "\(option.title) · \(option.code)",
+                                subtitle: option.subtitle,
+                                isSelected: publicCurrency.uppercased() == option.code.uppercased(),
+                                accentColor: accentColor
+                            ) {
+                                publicCurrency = option.code
+                            }
+                        }
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.black)
+
+                    Text("Te ustawienia będą używane na publicznej stronie menu")
+                        .font(.wix(13, wixWeight: .medium))
+                        .foregroundStyle(.black.opacity(0.55))
+
+                    Spacer()
+                }
+                .padding(14)
+                .background(accentSoft)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+        }
+    }
+}
+
+private struct PublicOptionButton: View {
+    let flag: String
+    let title: String
+    let subtitle: String
+    let isSelected: Bool
+    let accentColor: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            action()
+        } label: {
+            HStack(spacing: 14) {
+                Text(flag)
+                    .font(.system(size: 28))
+                    .frame(width: 46, height: 46)
+                    .background(Color.black.opacity(0.04))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.wix(16, wixWeight: .semiBold))
+                        .foregroundStyle(.black)
+
+                    Text(subtitle)
+                        .font(.wix(13, wixWeight: .medium))
+                        .foregroundStyle(.black.opacity(0.48))
+                }
+
+                Spacer()
+
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(isSelected ? accentColor : Color.black.opacity(0.18))
+            }
+            .padding(14)
+            .background(isSelected ? accentColor.opacity(0.10) : Color.black.opacity(0.035))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isSelected ? accentColor.opacity(0.45) : Color.black.opacity(0.06), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct PublicLanguageOption: Identifiable {
+    let code: String
+    let title: String
+    let subtitle: String
+    let flag: String
+
+    var id: String { code }
+}
+
+private struct PublicCurrencyOption: Identifiable {
+    let code: String
+    let title: String
+    let subtitle: String
+    let flag: String
+
+    var id: String { code }
 }
 
 private struct EditPublicLinkSection: View {

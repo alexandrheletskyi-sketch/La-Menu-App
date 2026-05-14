@@ -2,16 +2,68 @@
   "sourceLanguage" : "en",
   "strings" : {
     "" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
     },
     "#FF0043" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "#FF0043"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "#FF0043"
+          }
+        }
+      }
     },
     "%.0f zł" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%.0f zł"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%.0f zł"
+          }
+        }
+      }
     },
     "%@ / miesiąc" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ / month"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ / miesiąc"
+          }
+        }
+      }
     },
     "%@ %@" : {
       "localizations" : {
@@ -19,6 +71,28 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ %2$@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ %@ — %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ — %3$@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ — %3$@"
           }
         }
       }
@@ -28,6 +102,12 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "%1$@ %2$@ %3$@"
           }
         }
@@ -40,14 +120,62 @@
             "state" : "new",
             "value" : "%1$@ %2$lld %3$@ %4$lld"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$lld %3$@ %4$lld"
+          }
+        }
+      }
+    },
+    "%@/%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@/%2$@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@"
+          }
         }
       }
     },
     "%1$lld / %2$lld zamówień" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld orders"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld zamówień"
+          }
+        }
+      }
     },
     "%lld" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        }
+      }
     },
     "%lld %@" : {
       "localizations" : {
@@ -56,14 +184,46 @@
             "state" : "new",
             "value" : "%1$lld %2$@"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld %2$@"
+          }
         }
       }
     },
     "%lld SMS" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld SMS"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld SMS"
+          }
+        }
+      }
     },
     "%lld zł" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld zł"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld zł"
+          }
+        }
+      }
     },
     "%lld%@" : {
       "localizations" : {
@@ -72,11 +232,30 @@
             "state" : "new",
             "value" : "%1$lld%2$@"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld%2$@"
+          }
         }
       }
     },
     "•" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "•"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "•"
+          }
+        }
+      }
     },
     "20 pozycji" : {
       "localizations" : {
@@ -84,6 +263,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "20 items"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "20 pozycji"
           }
         }
       }
@@ -95,6 +280,12 @@
             "state" : "translated",
             "value" : "To save the QR code to your gallery, allow the app to add photos"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aby zapisać kod QR w galerii, zezwól aplikacji na dodawanie zdjęć"
+          }
         }
       }
     },
@@ -104,6 +295,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Address"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adres"
           }
         }
       }
@@ -115,6 +312,12 @@
             "state" : "translated",
             "value" : "Email address"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adres e-mail"
+          }
         }
       }
     },
@@ -124,6 +327,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Address has not been added"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adres nie został dodany"
           }
         }
       }
@@ -135,6 +344,12 @@
             "state" : "translated",
             "value" : "Address has not been completed yet"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adres nie został jeszcze uzupełniony"
+          }
         }
       }
     },
@@ -145,6 +360,12 @@
             "state" : "translated",
             "value" : "Current"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualny"
+          }
         }
       }
     },
@@ -153,7 +374,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Current plan"
+            "value" : "Current plan: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualny plan: %@"
           }
         }
       }
@@ -165,6 +392,12 @@
             "state" : "translated",
             "value" : "Active"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktywne"
+          }
         }
       }
     },
@@ -175,6 +408,12 @@
             "state" : "translated",
             "value" : "Active plan"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktywny plan"
+          }
         }
       }
     },
@@ -183,7 +422,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Active plan"
+            "value" : "Active plan: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktywny plan: %@"
           }
         }
       }
@@ -195,6 +440,12 @@
             "state" : "translated",
             "value" : "Activated %@ plan"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktywowano plan %@"
+          }
         }
       }
     },
@@ -204,6 +455,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Free plan activated"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktywowano plan Free"
           }
         }
       }
@@ -215,6 +472,12 @@
             "state" : "translated",
             "value" : "Activate plan"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktywuj plan"
+          }
         }
       }
     },
@@ -224,6 +487,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Allergen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alergen"
           }
         }
       }
@@ -235,6 +504,12 @@
             "state" : "translated",
             "value" : "Allergens"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alergeny"
+          }
         }
       }
     },
@@ -244,6 +519,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Allergens: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alergeny: %@"
           }
         }
       }
@@ -255,6 +536,12 @@
             "state" : "translated",
             "value" : "Cancel"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anuluj"
+          }
         }
       }
     },
@@ -264,6 +551,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The app does not have permission to save photos. Change this in your iPhone settings"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aplikacja nie ma dostępu do zapisywania zdjęć. Zmień to w ustawieniach iPhone’a"
           }
         }
       }
@@ -275,6 +568,12 @@
             "state" : "translated",
             "value" : "No name"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez imienia"
+          }
         }
       }
     },
@@ -284,6 +583,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No limit"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez limitu"
           }
         }
       }
@@ -295,6 +600,12 @@
             "state" : "translated",
             "value" : "Error"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Błąd"
+          }
         }
       }
     },
@@ -304,6 +615,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Purchase error"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Błąd zakupu"
           }
         }
       }
@@ -315,6 +632,12 @@
             "state" : "translated",
             "value" : "No active subscriptions"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak aktywnych subskrypcji"
+          }
         }
       }
     },
@@ -324,6 +647,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No data"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak danych"
           }
         }
       }
@@ -335,6 +664,12 @@
             "state" : "translated",
             "value" : "No access"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak dostępu"
+          }
         }
       }
     },
@@ -344,6 +679,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No ready orders"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak gotowych zamówień"
           }
         }
       }
@@ -355,6 +696,12 @@
             "state" : "translated",
             "value" : "No categories"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak kategorii"
+          }
         }
       }
     },
@@ -364,6 +711,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No link"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak linku"
           }
         }
       }
@@ -375,6 +728,12 @@
             "state" : "translated",
             "value" : "No public link"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak linku publicznego"
+          }
         }
       }
     },
@@ -384,6 +743,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No new orders"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak nowych zamówień"
           }
         }
       }
@@ -395,6 +760,12 @@
             "state" : "translated",
             "value" : "No items"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak pozycji"
+          }
         }
       }
     },
@@ -404,6 +775,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No items in this category"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak pozycji w tej kategorii"
           }
         }
       }
@@ -415,6 +792,12 @@
             "state" : "translated",
             "value" : "No profile"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak profilu"
+          }
         }
       }
     },
@@ -424,6 +807,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No slots"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak slotów"
           }
         }
       }
@@ -435,6 +824,12 @@
             "state" : "translated",
             "value" : "No orders"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak zamówień"
+          }
         }
       }
     },
@@ -444,6 +839,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No orders today"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak zamówień dzisiaj"
           }
         }
       }
@@ -455,12 +856,24 @@
             "state" : "translated",
             "value" : "No photo"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak zdjęcia"
+          }
         }
       }
     },
     "Business" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Business"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Business"
@@ -474,6 +887,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Price"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cena"
           }
         }
       }
@@ -621,6 +1040,12 @@
             "state" : "translated",
             "value" : "Slot duration"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Długość slotu"
+          }
         }
       }
     },
@@ -630,6 +1055,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Good start for a small menu"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dobry start dla małego menu"
           }
         }
       }
@@ -641,6 +1072,12 @@
             "state" : "translated",
             "value" : "Add allergen"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj alergen"
+          }
         }
       }
     },
@@ -651,6 +1088,12 @@
             "state" : "translated",
             "value" : "Add allergens for your venue. Later, you will be able to display them for each menu item after tapping the button."
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj alergeny dla swojego lokalu. Później będzie można je wyświetlać przy każdej pozycji menu po kliknięciu przycisku."
+          }
         }
       }
     },
@@ -660,6 +1103,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add category"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj kategorię"
           }
         }
       }
@@ -672,6 +1121,12 @@
             "state" : "translated",
             "value" : "Add logo"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj logo"
+          }
         }
       }
     },
@@ -681,6 +1136,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add your first category to start building your menu"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj pierwszą kategorię, aby zacząć budować swoje menu"
           }
         }
       }
@@ -692,6 +1153,12 @@
             "state" : "translated",
             "value" : "Add your first item to make this category look like a ready menu"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj pierwszą pozycję, aby kategoria zaczęła wyglądać jak gotowe menu"
+          }
         }
       }
     },
@@ -702,6 +1169,12 @@
             "state" : "translated",
             "value" : "Add item"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj pozycję"
+          }
         }
       }
     },
@@ -711,6 +1184,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add your own allergen table, which will later be visible next to menu items"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj własną tabelę alergenów, która później będzie widoczna przy pozycjach menu"
           }
         }
       }
@@ -723,6 +1202,12 @@
             "state" : "translated",
             "value" : "Add photo"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj zdjęcie"
+          }
         }
       }
     },
@@ -732,6 +1217,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delivery"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dostawa"
           }
         }
       }
@@ -743,6 +1234,12 @@
             "state" : "translated",
             "value" : "Available SMS messages in the current billing period"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dostępna liczba wiadomości SMS w bieżącym okresie rozliczeniowym"
+          }
         }
       }
     },
@@ -752,6 +1249,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Available"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dostępne"
           }
         }
       }
@@ -763,6 +1266,12 @@
             "state" : "translated",
             "value" : "Available plans"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dostępne plany"
+          }
         }
       }
     },
@@ -772,6 +1281,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Available SMS: %lld"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dostępne SMS: %lld"
           }
         }
       }
@@ -783,6 +1298,12 @@
             "state" : "translated",
             "value" : "Tap to open the subscription screen"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dotknij, aby przejść do ekranu subskrypcji"
+          }
         }
       }
     },
@@ -792,6 +1313,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Day"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dzień"
           }
         }
       }
@@ -803,6 +1330,12 @@
             "state" : "translated",
             "value" : "Today"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dzisiaj"
+          }
         }
       }
     },
@@ -812,6 +1345,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Today’s orders will appear here automatically"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dzisiejsze zamówienia pojawią się tutaj automatycznie"
           }
         }
       }
@@ -823,6 +1362,12 @@
             "state" : "translated",
             "value" : "Profile editing"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edycja profilu"
+          }
         }
       }
     },
@@ -833,6 +1378,12 @@
             "state" : "translated",
             "value" : "Edit item"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edytuj pozycję"
+          }
         }
       }
     },
@@ -842,6 +1393,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Edit profile"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edytuj profil"
           }
         }
       }
@@ -854,12 +1411,24 @@
             "state" : "translated",
             "value" : "Fulfillment options"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Formy realizacji"
+          }
         }
       }
     },
     "Free" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Free"
@@ -874,6 +1443,12 @@
             "state" : "translated",
             "value" : "Main"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Główny"
+          }
         }
       }
     },
@@ -883,6 +1458,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pickup time"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Godzina odbioru"
           }
         }
       }
@@ -894,6 +1475,12 @@
             "state" : "translated",
             "value" : "Hours, limits and order slot availability"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Godziny, limity i dostępność slotów zamówień"
+          }
         }
       }
     },
@@ -903,6 +1490,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hours, slots and order limits"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Godziny, sloty i limity zamówień"
           }
         }
       }
@@ -914,6 +1507,12 @@
             "state" : "translated",
             "value" : "Done"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gotowe"
+          }
         }
       }
     },
@@ -923,6 +1522,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Preset colors"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gotowe kolory"
           }
         }
       }
@@ -934,6 +1539,12 @@
             "state" : "translated",
             "value" : "Password"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hasło"
+          }
         }
       }
     },
@@ -943,6 +1554,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Home"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start"
           }
         }
       }
@@ -954,17 +1571,62 @@
             "state" : "translated",
             "value" : "How it will work"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jak to będzie działać"
+          }
         }
       }
     },
     "Język i waluta" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language and currency"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Język i waluta"
+          }
+        }
+      }
     },
     "Język strony" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page language"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Język strony"
+          }
+        }
+      }
     },
     "Język strony menu" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menu page language"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Język strony menu"
+          }
+        }
+      }
     },
     "Kategoria" : {
       "localizations" : {
@@ -972,6 +1634,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Category"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kategoria"
           }
         }
       }
@@ -983,6 +1651,12 @@
             "state" : "translated",
             "value" : "Each allergen can have a number, name and description. Later, menu items will be able to show the “Allergen table” button."
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Każdy alergen może mieć numer, nazwę i opis. Potem pozycje menu będą mogły pokazywać przycisk „Tabela alergenów”."
+          }
         }
       }
     },
@@ -992,6 +1666,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Customers can place orders when the venue is open"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klienci mogą składać zamówienia, jeśli lokal jest w godzinach pracy"
           }
         }
       }
@@ -1004,6 +1684,12 @@
             "state" : "translated",
             "value" : "Customers will see them on the menu page"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klienci zobaczą je na stronie menu"
+          }
         }
       }
     },
@@ -1014,6 +1700,12 @@
             "state" : "translated",
             "value" : "Menu QR code"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kod QR menu"
+          }
         }
       }
     },
@@ -1023,6 +1715,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "QR code saved to the photo gallery"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kod QR został zapisany w galerii zdjęć"
           }
         }
       }
@@ -1035,6 +1733,12 @@
             "state" : "translated",
             "value" : "Brand color"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kolor marki"
+          }
         }
       }
     },
@@ -1045,6 +1749,12 @@
             "state" : "translated",
             "value" : "Account"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto"
+          }
         }
       }
     },
@@ -1054,6 +1764,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Continue with Apple"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontynuuj z Apple"
+          }
+        }
+      }
+    },
+    "Kraj i domena" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kraj i domena"
           }
         }
       }
@@ -1066,6 +1792,12 @@
             "state" : "translated",
             "value" : "Step %lld of %lld"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Krok %lld z %lld"
+          }
         }
       }
     },
@@ -1076,12 +1808,24 @@
             "state" : "translated",
             "value" : "Purchased"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kupiony"
+          }
         }
       }
     },
     "La Menu" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La Menu"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "La Menu"
@@ -1096,6 +1840,12 @@
             "state" : "translated",
             "value" : "La Menu Business"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La Menu Business"
+          }
         }
       }
     },
@@ -1105,6 +1855,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Loading"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ładowanie"
           }
         }
       }
@@ -1116,6 +1872,12 @@
             "state" : "translated",
             "value" : "Loading menu..."
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ładowanie menu..."
+          }
         }
       }
     },
@@ -1125,6 +1887,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Loading allergen table..."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ładowanie tabeli alergenów..."
           }
         }
       }
@@ -1136,6 +1904,12 @@
             "state" : "translated",
             "value" : "Loading orders..."
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ładowanie zamówień..."
+          }
         }
       }
     },
@@ -1146,12 +1920,24 @@
             "state" : "translated",
             "value" : "Loading..."
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ładowanie..."
+          }
         }
       }
     },
     "lamenu.pl/%@" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lamenu.pl/%@"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "lamenu.pl/%@"
@@ -1166,6 +1952,12 @@
             "state" : "translated",
             "value" : "Limit"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit"
+          }
         }
       }
     },
@@ -1175,6 +1967,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Default limit"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit domyślny"
           }
         }
       }
@@ -1186,6 +1984,12 @@
             "state" : "translated",
             "value" : "Item limit"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit pozycji"
+          }
         }
       }
     },
@@ -1195,6 +1999,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Slot limit"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit slotu"
           }
         }
       }
@@ -1206,6 +2016,12 @@
             "state" : "translated",
             "value" : "Link has not been set yet"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link nie został jeszcze ustawiony"
+          }
         }
       }
     },
@@ -1215,6 +2031,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Public link"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link publiczny"
           }
         }
       }
@@ -1226,6 +2048,12 @@
             "state" : "translated",
             "value" : "Link copied"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link skopiowany"
+          }
         }
       }
     },
@@ -1236,6 +2064,12 @@
             "state" : "translated",
             "value" : "Loading..."
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ładowanie..."
+          }
         }
       }
     },
@@ -1243,6 +2077,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logo"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Logo"
@@ -1258,6 +2098,12 @@
             "state" : "translated",
             "value" : "Venue logo"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logo lokalu"
+          }
         }
       }
     },
@@ -1267,6 +2113,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The venue can also accept orders after opening hours"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokal może przyjmować zamówienia także po godzinach pracy"
           }
         }
       }
@@ -1279,6 +2131,12 @@
             "state" : "translated",
             "value" : "Venue open"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokal otwarty"
+          }
         }
       }
     },
@@ -1290,6 +2148,12 @@
             "state" : "translated",
             "value" : "Venue closed"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokal zamknięty"
+          }
         }
       }
     },
@@ -1299,6 +2163,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "or"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lub"
           }
         }
       }
@@ -1310,6 +2180,12 @@
             "state" : "translated",
             "value" : "Maximum package for high sales"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maksymalny pakiet dla dużej sprzedaży"
+          }
         }
       }
     },
@@ -1319,6 +2195,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Manage your restaurant menus and public links"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zarządzaj menu restauracji i linkami publicznymi"
           }
         }
       }
@@ -1330,6 +2212,12 @@
             "state" : "translated",
             "value" : "Already have an account? Log in"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masz już konto? Zaloguj się"
+          }
         }
       }
     },
@@ -1340,12 +2228,24 @@
             "state" : "translated",
             "value" : "Menu"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menu"
+          }
         }
       }
     },
     "MENU" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MENU"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "MENU"
@@ -1361,12 +2261,24 @@
             "state" : "translated",
             "value" : "Payment methods"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Metody płatności"
+          }
         }
       }
     },
     "min" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "min"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "min"
@@ -1381,6 +2293,12 @@
             "state" : "translated",
             "value" : "Track orders, update statuses and serve customers from one place"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monitoruj zamówienia, aktualizuj statusy i obsługuj klientów z jednego miejsca"
+          }
         }
       }
     },
@@ -1390,6 +2308,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choose any color and see the result instantly"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Możesz wybrać dowolny kolor i od razu zobaczyć efekt"
           }
         }
       }
@@ -1401,6 +2325,12 @@
             "state" : "translated",
             "value" : "Best choice for an active venue"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Najlepszy wybór dla aktywnego lokalu"
+          }
         }
       }
     },
@@ -1410,6 +2340,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Set up a public link first to generate a QR code"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Najpierw ustaw link publiczny, aby wygenerować kod QR"
           }
         }
       }
@@ -1421,6 +2357,12 @@
             "state" : "translated",
             "value" : "Complete onboarding first"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Najpierw uzupełnij onboarding"
+          }
         }
       }
     },
@@ -1430,6 +2372,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fastest pickup"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Najszybszy odbiór"
           }
         }
       }
@@ -1441,6 +2389,12 @@
             "state" : "translated",
             "value" : "Tools"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Narzędzia"
+          }
         }
       }
     },
@@ -1451,6 +2405,12 @@
             "state" : "translated",
             "value" : "Name"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nazwa"
+          }
         }
       }
     },
@@ -1460,6 +2420,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Category name"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nazwa kategorii"
           }
         }
       }
@@ -1472,6 +2438,12 @@
             "state" : "translated",
             "value" : "Name, address, phone number and logo will be visible to customers"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nazwa, adres, telefon i logo będą widoczne dla klientów"
+          }
         }
       }
     },
@@ -1481,6 +2453,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Name, address, phone number, public link, legal details and appearance"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nazwa, adres, telefon, link publiczny, dane prawne i wygląd"
           }
         }
       }
@@ -1492,6 +2470,12 @@
             "state" : "translated",
             "value" : "Don’t have an account? Create a profile"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie masz konta? Stwórz profil"
+          }
         }
       }
     },
@@ -1501,6 +2485,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Failed to activate the plan"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się aktywować planu"
           }
         }
       }
@@ -1512,6 +2502,12 @@
             "state" : "translated",
             "value" : "Could not load the user plan"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się odczytać planu użytkownika"
+          }
         }
       }
     },
@@ -1521,6 +2517,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Could not load the profile"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się odczytać profilu"
           }
         }
       }
@@ -1532,6 +2534,12 @@
             "state" : "translated",
             "value" : "Could not load the user"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się odczytać użytkownika"
+          }
         }
       }
     },
@@ -1541,6 +2549,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Could not open item editing"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się otworzyć edycji pozycji"
           }
         }
       }
@@ -1552,6 +2566,12 @@
             "state" : "translated",
             "value" : "Could not access the gallery"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się uzyskać dostępu do galerii"
+          }
         }
       }
     },
@@ -1561,6 +2581,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Failed to generate the QR code"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się wygenerować kodu QR"
           }
         }
       }
@@ -1572,6 +2598,12 @@
             "state" : "translated",
             "value" : "Failed to save the QR code to the gallery"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się zapisać kodu QR w galerii"
+          }
         }
       }
     },
@@ -1581,6 +2613,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Failed to save the plan in the database. Check the logs in Xcode"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się zapisać planu w bazie. Sprawdź logi w Xcode"
           }
         }
       }
@@ -1592,6 +2630,12 @@
             "state" : "translated",
             "value" : "No active subscription was found on this Apple account"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie znaleziono aktywnej subskrypcji na tym koncie Apple"
+          }
         }
       }
     },
@@ -1601,6 +2645,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Product %@ was not found in StoreKit"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie znaleziono produktu %@ w StoreKit"
           }
         }
       }
@@ -1612,6 +2662,12 @@
             "state" : "translated",
             "value" : "Unavailable"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niedostępne"
+          }
         }
       }
     },
@@ -1621,6 +2677,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "New category"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowa kategoria"
           }
         }
       }
@@ -1632,6 +2694,12 @@
             "state" : "translated",
             "value" : "New item"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowa pozycja"
+          }
         }
       }
     },
@@ -1641,6 +2709,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "New"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowe"
           }
         }
       }
@@ -1652,6 +2726,12 @@
             "state" : "translated",
             "value" : "New orders will appear here automatically"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowe zamówienia pojawią się tutaj automatycznie"
+          }
         }
       }
     },
@@ -1661,6 +2741,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "New orders will appear here when a customer places an order"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowe zamówienia pojawią się tutaj, gdy klient złoży zamówienie"
           }
         }
       }
@@ -1672,6 +2758,12 @@
             "state" : "translated",
             "value" : "New orders are manually disabled"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowe zamówienia są ręcznie wyłączone"
+          }
         }
       }
     },
@@ -1681,6 +2773,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "E.g. Pizza"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Np. Pizza"
           }
         }
       }
@@ -1692,6 +2790,12 @@
             "state" : "translated",
             "value" : "Pickup"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odbiór osobisty"
+          }
         }
       }
     },
@@ -1701,6 +2805,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unlock slot"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odblokuj slot"
           }
         }
       }
@@ -1713,6 +2823,12 @@
             "state" : "translated",
             "value" : "Time between slots"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odstęp między slotami"
+          }
         }
       }
     },
@@ -1723,12 +2839,24 @@
             "state" : "translated",
             "value" : "Refreshing"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odświeżanie"
+          }
         }
       }
     },
     "OK" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
@@ -4362,6 +5490,12 @@
             "state" : "translated",
             "value" : "Optional"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcjonalne"
+          }
         }
       }
     },
@@ -4371,6 +5505,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Description"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opis"
           }
         }
       }
@@ -4382,6 +5522,12 @@
             "state" : "translated",
             "value" : "The item limit for the %@ plan has been reached. To add another item, choose a higher plan."
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osiągnięto limit pozycji dla planu %@. Aby dodać kolejną pozycję, wybierz wyższy plan."
+          }
         }
       }
     },
@@ -4391,6 +5537,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open menu"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz menu"
           }
         }
       }
@@ -4402,6 +5554,12 @@
             "state" : "translated",
             "value" : "SMS package"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakiet SMS"
+          }
         }
       }
     },
@@ -4411,6 +5569,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Full"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pełny"
           }
         }
       }
@@ -4423,12 +5587,24 @@
             "state" : "translated",
             "value" : "First item"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pierwsza pozycja"
+          }
         }
       }
     },
     "Plan" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Plan"
@@ -4443,6 +5619,12 @@
             "state" : "translated",
             "value" : "Plan %@"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan %@"
+          }
         }
       }
     },
@@ -4452,6 +5634,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Active plan"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan aktywny"
           }
         }
       }
@@ -4463,6 +5651,12 @@
             "state" : "translated",
             "value" : "Free plan active"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan Free aktywny"
+          }
         }
       }
     },
@@ -4472,6 +5666,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Plan was not saved"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan nie został zapisany"
           }
         }
       }
@@ -4483,6 +5683,12 @@
             "state" : "translated",
             "value" : "Plan has been activated"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan został aktywowany"
+          }
         }
       }
     },
@@ -4492,6 +5698,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Plans"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plany"
           }
         }
       }
@@ -4503,12 +5715,24 @@
             "state" : "translated",
             "value" : "Plans and subscription"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plany i subskrypcja"
+          }
         }
       }
     },
     "Plus" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Plus"
@@ -4523,22 +5747,47 @@
             "state" : "translated",
             "value" : "Order acceptance will stop after the venue closes"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Po zamknięciu lokalu przyjmowanie zamówień zostanie zatrzymane"
+          }
         }
       }
     },
     "Po zapisaniu ten kolor będzie używany na stronie menu" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "After saving, this color will be used on the menu page"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Po zapisaniu ten kolor będzie używany na stronie menu"
+          }
         }
       }
     },
     "Po zapisaniu ustawienia będą używane na publicznej stronie menu" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After saving, these settings will be used on the public menu page"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Po zapisaniu ustawienia będą używane na publicznej stronie menu"
+          }
+        }
+      }
     },
     "Pobierz kod QR" : {
       "localizations" : {
@@ -4546,6 +5795,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Download QR code"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pobierz kod QR"
           }
         }
       }
@@ -4557,6 +5812,12 @@
             "state" : "translated",
             "value" : "Preview"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podgląd"
+          }
         }
       }
     },
@@ -4567,6 +5828,12 @@
             "state" : "translated",
             "value" : "Color preview"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podgląd koloru"
+          }
         }
       }
     },
@@ -4576,6 +5843,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Basic details"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podstawowe dane"
           }
         }
       }
@@ -4588,6 +5861,12 @@
             "state" : "translated",
             "value" : "Basic information"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podstawowe informacje"
+          }
         }
       }
     },
@@ -4597,6 +5876,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Show password"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż hasło"
           }
         }
       }
@@ -4609,6 +5894,12 @@
             "state" : "translated",
             "value" : "It will appear on the venue page and in the dashboard"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaże się na stronie lokalu i w panelu"
+          }
         }
       }
     },
@@ -4618,6 +5909,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Recommended"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Polecany"
           }
         }
       }
@@ -4629,6 +5926,12 @@
             "state" : "translated",
             "value" : "Compare features and choose the plan that best fits your sales growth"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Porównaj możliwości i wybierz plan najlepiej dopasowany do rozwoju Twojej sprzedaży"
+          }
         }
       }
     },
@@ -4638,6 +5941,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SMS notifications"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Powiadomienia SMS"
           }
         }
       }
@@ -4649,6 +5958,12 @@
             "state" : "translated",
             "value" : "%lld remaining"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pozostało %lld"
+          }
         }
       }
     },
@@ -4659,12 +5974,24 @@
             "state" : "translated",
             "value" : "Menu items: %lld/%lld"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pozycje w menu: %lld/%lld"
+          }
         }
       }
     },
     "Premium" : {
       "localizations" : {
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Premium"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Premium"
@@ -4679,6 +6006,12 @@
             "state" : "translated",
             "value" : "Privacy Policy"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Polityka prywatności"
+          }
         }
       }
     },
@@ -4688,6 +6021,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Product unavailable"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Produkt niedostępny"
           }
         }
       }
@@ -4699,6 +6038,12 @@
             "state" : "translated",
             "value" : "Products"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Produkty"
+          }
         }
       }
     },
@@ -4708,6 +6053,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Profile"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil"
           }
         }
       }
@@ -4719,6 +6070,12 @@
             "state" : "translated",
             "value" : "Extend order acceptance"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przedłuż przyjmowanie zamówień"
+          }
         }
       }
     },
@@ -4728,6 +6085,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Switch to this plan"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przejdź na ten plan"
           }
         }
       }
@@ -4739,6 +6102,12 @@
             "state" : "translated",
             "value" : "Revenue"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przychód"
+          }
         }
       }
     },
@@ -4748,6 +6117,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Accepted"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przyjęte"
           }
         }
       }
@@ -4759,6 +6134,12 @@
             "state" : "translated",
             "value" : "Order acceptance"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przyjmowanie zamówień"
+          }
         }
       }
     },
@@ -4768,6 +6149,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Restore purchases"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przywróć zakupy"
           }
         }
       }
@@ -4779,6 +6166,12 @@
             "state" : "translated",
             "value" : "Public link"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publiczny link"
+          }
         }
       }
     },
@@ -4788,6 +6181,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Order schedule"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozkład zamówień"
           }
         }
       }
@@ -4799,6 +6198,22 @@
             "state" : "translated",
             "value" : "Photo size: %@"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozmiar zdjęcia: %@"
+          }
+        }
+      }
+    },
+    "Rynek publicznej strony menu" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rynek publicznej strony menu"
+          }
         }
       }
     },
@@ -4808,6 +6223,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Slots"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sloty"
           }
         }
       }
@@ -4820,6 +6241,12 @@
             "state" : "translated",
             "value" : "Time slots"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sloty czasowe"
+          }
         }
       }
     },
@@ -4829,6 +6256,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pickup method"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sposób odbioru"
           }
         }
       }
@@ -4840,6 +6273,12 @@
             "state" : "translated",
             "value" : "Check this day’s hours or slot settings"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprawdź godziny tego dnia lub ustawienia slotów"
+          }
         }
       }
     },
@@ -4849,6 +6288,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Try again or use Restore purchases"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spróbuj ponownie albo użyj opcji Przywróć zakupy"
           }
         }
       }
@@ -4861,6 +6306,12 @@
             "state" : "translated",
             "value" : "Order status"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status zamówień"
+          }
         }
       }
     },
@@ -4870,6 +6321,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Create profile"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stwórz profil"
           }
         }
       }
@@ -4881,6 +6338,12 @@
             "state" : "translated",
             "value" : "Create your profile"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stwórz swój profil"
+          }
         }
       }
     },
@@ -4890,6 +6353,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "By subscribing, you accept the Terms of Service and Privacy Policy"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subskrybując, akceptujesz warunki korzystania z usługi oraz politykę prywatności"
           }
         }
       }
@@ -4901,6 +6370,12 @@
             "state" : "translated",
             "value" : "Subscriptions are managed by Apple. You can manage them in your Apple ID account settings"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subskrypcje są obsługiwane przez Apple. Możesz nimi zarządzać w ustawieniach swojego konta Apple ID"
+          }
         }
       }
     },
@@ -4910,6 +6385,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This action will delete the category and all items in this category"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta akcja usunie kategorię oraz wszystkie pozycje z tej kategorii"
           }
         }
       }
@@ -4922,11 +6403,30 @@
             "state" : "translated",
             "value" : "This fee will be visible for delivery orders"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta stawka będzie widoczna przy zamówieniu z dostawą"
+          }
         }
       }
     },
     "Ta waluta będzie pokazywana przy cenach produktów i kosztach dostawy" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This currency will be shown for product prices and delivery costs"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta waluta będzie pokazywana przy cenach produktów i kosztach dostawy"
+          }
+        }
+      }
     },
     "Tabela alergenów" : {
       "localizations" : {
@@ -4935,11 +6435,30 @@
             "state" : "translated",
             "value" : "Allergen table"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tabela alergenów"
+          }
         }
       }
     },
     "Te ustawienia będą używane na publicznej stronie menu" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These settings will be used on the public menu page"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Te ustawienia będą używane na publicznej stronie menu"
+          }
+        }
+      }
     },
     "Tej operacji nie można cofnąć. Wszystkie dane konta i lokalu zostaną usunięte." : {
       "localizations" : {
@@ -4947,6 +6466,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This action cannot be undone. All account and venue data will be deleted"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tej operacji nie można cofnąć. Wszystkie dane konta i lokalu zostaną usunięte."
           }
         }
       }
@@ -4958,6 +6483,12 @@
             "state" : "translated",
             "value" : "Phone"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telefon"
+          }
         }
       }
     },
@@ -4967,6 +6498,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Phone number has not been added yet"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telefon nie został jeszcze uzupełniony"
           }
         }
       }
@@ -4978,6 +6515,12 @@
             "state" : "translated",
             "value" : "This plan is currently active"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ten plan jest obecnie aktywny"
+          }
         }
       }
     },
@@ -4988,22 +6531,47 @@
             "state" : "translated",
             "value" : "Terms of Use"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warunki korzystania"
+          }
         }
       }
     },
     "Tutaj możesz zmienić główny kolor swojej strony menu" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Here you can change the main color of your menu page"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutaj możesz zmienić główny kolor swojej strony menu"
+          }
         }
       }
     },
     "Tutaj możesz zmienić język, walutę i główny kolor swojej strony menu" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Here you can change the language, currency and main color of your menu page"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutaj możesz zmienić język, walutę i główny kolor swojej strony menu"
+          }
+        }
+      }
     },
     "Twój kolor strony" : {
       "localizations" : {
@@ -5011,6 +6579,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Your page color"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twój kolor strony"
           }
         }
       }
@@ -5022,6 +6596,12 @@
             "state" : "translated",
             "value" : "Your account is active and ready to manage your venue"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twoje konto jest aktualnie aktywne i gotowe do zarządzania lokalem"
+          }
         }
       }
     },
@@ -5031,6 +6611,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Share"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udostępnij"
           }
         }
       }
@@ -5042,6 +6628,12 @@
             "state" : "translated",
             "value" : "Hide password"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukryj hasło"
+          }
         }
       }
     },
@@ -5051,6 +6643,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Set your public link name in your profile to generate a QR code"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ustaw nazwę linku publicznego w profilu, aby wygenerować kod QR"
           }
         }
       }
@@ -5062,6 +6660,12 @@
             "state" : "translated",
             "value" : "Settings"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ustawienia"
+          }
         }
       }
     },
@@ -5071,6 +6675,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usuń"
           }
         }
       }
@@ -5082,6 +6692,12 @@
             "state" : "translated",
             "value" : "Remove limit"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usuń limit"
+          }
         }
       }
     },
@@ -5091,6 +6707,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete item"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usuń pozycję"
           }
         }
       }
@@ -5102,6 +6724,12 @@
             "state" : "translated",
             "value" : "Delete profile"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usuń profil"
+          }
         }
       }
     },
@@ -5111,6 +6739,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete photo"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usuń zdjęcie"
           }
         }
       }
@@ -5122,6 +6756,12 @@
             "state" : "translated",
             "value" : "Delete category?"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usunąć kategorię?"
+          }
         }
       }
     },
@@ -5131,6 +6771,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete profile?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usunąć profil?"
           }
         }
       }
@@ -5142,6 +6788,12 @@
             "state" : "translated",
             "value" : "Deleting..."
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usuwanie..."
+          }
         }
       }
     },
@@ -5151,6 +6803,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "this period"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "w tym okresie"
           }
         }
       }
@@ -5162,14 +6820,46 @@
             "state" : "translated",
             "value" : "Weight"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waga"
+          }
         }
       }
     },
     "Waluta" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Currency"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waluta"
+          }
+        }
+      }
     },
     "Waluta strony" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page currency"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waluta strony"
+          }
+        }
+      }
     },
     "Wejdź do swojego profilu i zarządzaj lokalem w jednym miejscu" : {
       "localizations" : {
@@ -5177,6 +6867,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Go to your profile and manage your venue in one place"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wejdź do swojego profilu i zarządzaj lokalem w jednym miejscu"
           }
         }
       }
@@ -5188,6 +6884,12 @@
             "state" : "translated",
             "value" : "More menu items and more SMS for growing sales"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Więcej pozycji i więcej SMS dla rosnącej sprzedaży"
+          }
         }
       }
     },
@@ -5197,6 +6899,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Account owner"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Właściciel konta"
           }
         }
       }
@@ -5208,6 +6916,12 @@
             "state" : "translated",
             "value" : "Custom color"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Własny kolor"
+          }
         }
       }
     },
@@ -5217,6 +6931,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enter email address"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wpisz adres e-mailм"
           }
         }
       }
@@ -5228,6 +6948,12 @@
             "state" : "translated",
             "value" : "Enter allergens separated by commas, e.g. gluten, milk, nuts"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wpisz alergeny po przecinku, np. gluten, mleko, orzechy"
+          }
         }
       }
     },
@@ -5237,6 +6963,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enter password"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wpisz hasło"
           }
         }
       }
@@ -5248,6 +6980,12 @@
             "state" : "translated",
             "value" : "Enter a color in hex format, for example #FF0043"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wpisz kolor w formacie hex, na przykład #FF0043"
+          }
         }
       }
     },
@@ -5257,6 +6995,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enter a category name, e.g. Pizza, Sushi or Drinks"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wpisz nazwę kategorii, np. Pizza, Sushi albo Napoje"
           }
         }
       }
@@ -5269,6 +7013,12 @@
             "state" : "translated",
             "value" : "Back"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wstecz"
+          }
         }
       }
     },
@@ -5278,6 +7028,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "All"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wszystkie"
           }
         }
       }
@@ -5289,6 +7045,12 @@
             "state" : "translated",
             "value" : "All orders"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wszystkie zamówienia"
+          }
         }
       }
     },
@@ -5299,11 +7061,30 @@
             "state" : "translated",
             "value" : "Choose any color"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz dowolny kolor"
+          }
         }
       }
     },
     "Wybierz język, w którym będzie wyświetlana publiczna strona menu" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose the language in which the public menu page will be displayed"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz język, w którym będzie wyświetlana publiczna strona menu"
+          }
+        }
+      }
     },
     "Wybierz kolor" : {
       "extractionState" : "manual",
@@ -5312,6 +7093,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choose color"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz kolor"
           }
         }
       }
@@ -5323,6 +7110,12 @@
             "state" : "translated",
             "value" : "Choose a plan"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz plan"
+          }
         }
       }
     },
@@ -5333,6 +7126,12 @@
             "state" : "translated",
             "value" : "Choose a plan for your venue"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz plan dla swojego lokalu"
+          }
         }
       }
     },
@@ -5342,6 +7141,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choose photo"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz zdjęcie"
           }
         }
       }
@@ -5354,6 +7159,12 @@
             "state" : "translated",
             "value" : "Selected color"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybrany kolor"
+          }
         }
       }
     },
@@ -5363,6 +7174,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Print or show customers the code that takes them directly to your online menu"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wydrukuj lub pokaż klientom kod prowadzący bezpośrednio do menu online"
           }
         }
       }
@@ -5374,6 +7191,12 @@
             "state" : "translated",
             "value" : "Used"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wykorzystane"
+          }
         }
       }
     },
@@ -5383,6 +7206,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Log out"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyloguj się"
           }
         }
       }
@@ -5394,6 +7223,12 @@
             "state" : "translated",
             "value" : "Log out to safely end your session in the app"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyloguj się, jeśli chcesz bezpiecznie zakończyć pracę w aplikacji"
+          }
         }
       }
     },
@@ -5403,6 +7238,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Something went wrong"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wystąpił problem"
           }
         }
       }
@@ -5414,6 +7255,12 @@
             "state" : "translated",
             "value" : "Your menus"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twoje menu"
+          }
         }
       }
     },
@@ -5423,6 +7270,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "of %lld SMS"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z %lld SMS"
           }
         }
       }
@@ -5434,6 +7287,12 @@
             "state" : "translated",
             "value" : "Too late"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za późno"
+          }
         }
       }
     },
@@ -5443,6 +7302,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Blocked"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zablokowane"
           }
         }
       }
@@ -5454,6 +7319,12 @@
             "state" : "translated",
             "value" : "Block slot"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zablokuj slot"
+          }
         }
       }
     },
@@ -5463,6 +7334,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "End session"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zakończ sesję"
           }
         }
       }
@@ -5474,6 +7351,12 @@
             "state" : "translated",
             "value" : "Completed"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zakończone"
+          }
         }
       }
     },
@@ -5483,6 +7366,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Purchases restored"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zakupy przywrócone"
           }
         }
       }
@@ -5494,6 +7383,12 @@
             "state" : "translated",
             "value" : "Log in"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaloguj się"
+          }
         }
       }
     },
@@ -5503,6 +7398,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Create an account and start managing your online menu"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Załóż konto i zacznij zarządzać swoim menu online"
           }
         }
       }
@@ -5514,6 +7415,12 @@
             "state" : "translated",
             "value" : "Orders"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zamówienia"
+          }
         }
       }
     },
@@ -5523,6 +7430,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Orders marked as ready will appear here"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zamówienia oznaczone jako gotowe pojawią się tutaj"
           }
         }
       }
@@ -5534,6 +7447,12 @@
             "state" : "translated",
             "value" : "Orders will appear here automatically"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zamówienia pojawią się tutaj automatycznie"
+          }
         }
       }
     },
@@ -5543,6 +7462,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Order"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zamówienie"
           }
         }
       }
@@ -5554,6 +7479,12 @@
             "state" : "translated",
             "value" : "Saved"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisano"
+          }
         }
       }
     },
@@ -5563,6 +7494,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Saving..."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisywanie..."
           }
         }
       }
@@ -5574,6 +7511,12 @@
             "state" : "translated",
             "value" : "Save"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisz"
+          }
         }
       }
     },
@@ -5583,6 +7526,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Save allergen table"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisz tabelę alergenów"
           }
         }
       }
@@ -5594,6 +7543,12 @@
             "state" : "translated",
             "value" : "Save settings"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisz ustawienia"
+          }
         }
       }
     },
@@ -5603,6 +7558,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Save changes"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisz zmiany"
           }
         }
       }
@@ -5614,6 +7575,12 @@
             "state" : "translated",
             "value" : "Manage categories, add items, and keep your menu organized"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zarządzaj kategoriami, dodawaj pozycje i utrzymuj ofertę w aktualnym porządku"
+          }
         }
       }
     },
@@ -5623,6 +7590,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Manage your account, venue profile, and order settings in one place"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zarządzaj kontem, profilem lokalu i ustawieniami zamówień w jednym miejscu"
           }
         }
       }
@@ -5634,6 +7607,12 @@
             "state" : "translated",
             "value" : "Manage schedule"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zarządzaj rozkładem"
+          }
         }
       }
     },
@@ -5644,6 +7623,12 @@
             "state" : "translated",
             "value" : "Manage slots"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zarządzaj slotami"
+          }
         }
       }
     },
@@ -5653,6 +7638,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Photo"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zdjęcie"
           }
         }
       }
@@ -5665,6 +7656,12 @@
             "state" : "translated",
             "value" : "Logo photo"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zdjęcie logo"
+          }
         }
       }
     },
@@ -5676,6 +7673,12 @@
             "state" : "translated",
             "value" : "Item photo"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zdjęcie pozycji"
+          }
         }
       }
     },
@@ -5685,6 +7688,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scan and visit the page"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeskanuj i odwiedź stronę"
           }
         }
       }
@@ -5696,6 +7705,12 @@
             "state" : "translated",
             "value" : "Change your plan, check menu limits and SMS packages"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zmień plan, sprawdź limity menu i pakiety SMS"
+          }
         }
       }
     },
@@ -5705,6 +7720,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Change status"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zmień status"
           }
         }
       }
@@ -5716,6 +7737,12 @@
             "state" : "translated",
             "value" : "Change photo"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zmień zdjęcie"
+          }
         }
       }
     },
@@ -5726,6 +7753,12 @@
             "state" : "translated",
             "value" : "Active plan found: %@"
           }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Znaleziono aktywny plan %@"
+          }
         }
       }
     },
@@ -5735,6 +7768,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "View available plans and limits for your venue"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zobacz dostępne plany i limity dla swojego lokalu"
           }
         }
       }

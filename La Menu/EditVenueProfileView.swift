@@ -52,6 +52,7 @@ struct EditVenueProfileView: View {
 
                             BrandColorStepView(
                                 accentColorHex: binding(\.accentColorHex),
+                                publicCountry: binding(\.publicCountry),
                                 publicLanguage: binding(\.publicLanguage),
                                 publicCurrency: binding(\.publicCurrency)
                             )
